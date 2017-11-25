@@ -11,7 +11,7 @@ object SqlParser {
   }
 }
 
-private[sqlparser] class SqlParser(val input: ParserInput) extends Parser {
+private class SqlParser(val input: ParserInput) extends Parser {
 
   def Sql = rule {
     WSRule ~ SelectRule ~ WSRule ~ FromRule ~ WSRule ~ optional(WhereRule) ~ WSRule ~ EOI ~> {
