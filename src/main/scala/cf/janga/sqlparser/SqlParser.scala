@@ -26,7 +26,7 @@ private class SqlParser(val input: ParserInput) extends Parser {
   }
 
   def IdentifierRule = rule {
-    capture(oneOrMore(anyOf("abcdefghijklmnopqrstuvwyxz0123456789_")))
+    capture(oneOrMore(anyOf("abcdefghijklmnopqrstuvwyxz0123456789_"))) ~> Identifier
   }
 
   def IdentifiersRule = rule {
