@@ -22,11 +22,19 @@ private class SqlParser(val input: ParserInput) extends Parser {
   }
 
   def SelectRule = rule {
-    ignoreCase("select") ~ WSRule ~ IdentifiersRule ~> Projection
+    ignoreCase("select") ~ WSRule ~ ProjectionIdentifiersRule ~> Projections
   }
 
   def IdentifierRule = rule {
-    capture(oneOrMore(anyOf("abcdefghijklmnopqrstuvwyxz0123456789_"))) ~> Identifier
+    capture(oneOrMore(anyOf("abcdefghijklmnopqrstuvwyxz0123456789_")))
+  }
+
+  def ProjectionIdentifierRule = rule {
+    optional(IdentifierRule ~ ch('.')) ~ IdentifierRule ~> ((alias, id) => Projection(alias.asInstanceOf[Option[String]], id.asInstanceOf[String]))
+  }
+
+  def ProjectionIdentifiersRule = rule {
+    oneOrMore(ProjectionIdentifierRule).separatedBy(WSRule ~ str(",") ~ WSRule)
   }
 
   def IdentifiersRule = rule {

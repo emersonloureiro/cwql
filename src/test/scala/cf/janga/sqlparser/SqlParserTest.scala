@@ -11,14 +11,21 @@ class SqlParserTest extends WordSpec with Matchers {
       "parse a single projection" in {
         val queryString = "select status from requests"
         val Success(query) = SqlParser.parse(queryString)
-        query.projection.values should be(Seq("status"))
+        query.projection.values should be(Seq(Projection(None, "status")))
         query.from.values should be(Seq("requests"))
       }
 
       "parse multiple projections" in {
         val queryString = "select status, time from requests"
         val Success(query) = SqlParser.parse(queryString)
-        query.projection.values should be(Seq(Identifier("status"), Identifier("time")))
+        query.projection.values should be(Seq(Projection(None, "status"), Projection(None, "time")))
+        query.from.values should be(Seq("requests"))
+      }
+
+      "parse projections with aliases" in {
+        val queryString = "select alias1.status, alias2.time from requests"
+        val Success(query) = SqlParser.parse(queryString)
+        query.projection.values should be(Seq(Projection(Some("alias1"), "status"), Projection(Some("alias2"), "time")))
         query.from.values should be(Seq("requests"))
       }
     }
@@ -28,7 +35,7 @@ class SqlParserTest extends WordSpec with Matchers {
         val queryString = "select status, time from requests where status='200'"
         val Success(query) = SqlParser.parse(queryString)
         val Some(selection) = query.selectionOption
-        selection.booleanExpression.simpleBooleanExpression should be(SimpleBooleanExpression(Identifier("status"), ComparisonOperator("="), StringValue("200")))
+        selection.booleanExpression.simpleBooleanExpression should be(SimpleBooleanExpression("status", ComparisonOperator("="), StringValue("200")))
         selection.booleanExpression.nested should be(Seq())
       }
 
@@ -36,10 +43,10 @@ class SqlParserTest extends WordSpec with Matchers {
         val queryString = "select status, time from requests where status='200' and size < 10 or time > 5"
         val Success(query) = SqlParser.parse(queryString)
         val Some(selection) = query.selectionOption
-        selection.booleanExpression.simpleBooleanExpression should be(SimpleBooleanExpression(Identifier("status"), ComparisonOperator("="), StringValue("200")))
+        selection.booleanExpression.simpleBooleanExpression should be(SimpleBooleanExpression("status", ComparisonOperator("="), StringValue("200")))
         selection.booleanExpression.nested should be(Seq(
-          (BooleanOperator("and"), SimpleBooleanExpression(Identifier("size"), ComparisonOperator("<"), IntegerValue(10))),
-          (BooleanOperator("or"), SimpleBooleanExpression(Identifier("time"), ComparisonOperator(">"), IntegerValue(5)))
+          (BooleanOperator("and"), SimpleBooleanExpression("size", ComparisonOperator("<"), IntegerValue(10))),
+          (BooleanOperator("or"), SimpleBooleanExpression("time", ComparisonOperator(">"), IntegerValue(5)))
         ))
       }
     }
