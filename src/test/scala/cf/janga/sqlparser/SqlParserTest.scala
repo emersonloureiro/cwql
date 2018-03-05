@@ -9,38 +9,46 @@ class SqlParserTest extends WordSpec with Matchers {
   "sql parser" when {
     "given a basic query" should {
       "parse a single projection" in {
-        val queryString = "select status from requests"
+        val queryString = "select status from requests between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z"
         val Success(query) = SqlParser.parse(queryString)
         query.projection.values should be(Seq(Projection(None, "status")))
         query.from.values should be(Seq("requests"))
+        query.between.startTime should be("2018-01-01T00:00:00Z")
+        query.between.endTime should be("2018-01-31T:23:59:59Z")
       }
 
       "parse multiple projections" in {
-        val queryString = "select status, time from requests"
+        val queryString = "select status, time from requests between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z"
         val Success(query) = SqlParser.parse(queryString)
         query.projection.values should be(Seq(Projection(None, "status"), Projection(None, "time")))
         query.from.values should be(Seq("requests"))
+        query.between.startTime should be("2018-01-01T00:00:00Z")
+        query.between.endTime should be("2018-01-31T:23:59:59Z")
       }
 
       "parse projections with aliases" in {
-        val queryString = "select alias1.status, alias2.time from requests"
+        val queryString = "select alias1.status, alias2.time from requests between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z"
         val Success(query) = SqlParser.parse(queryString)
         query.projection.values should be(Seq(Projection(Some("alias1"), "status"), Projection(Some("alias2"), "time")))
         query.from.values should be(Seq("requests"))
+        query.between.startTime should be("2018-01-01T00:00:00Z")
+        query.between.endTime should be("2018-01-31T:23:59:59Z")
       }
     }
 
     "given a where clause" should {
       "parse a single boolean expression" in {
-        val queryString = "select status, time from requests where status='200'"
+        val queryString = "select status, time from requests where status='200' between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z"
         val Success(query) = SqlParser.parse(queryString)
         val Some(selection) = query.selectionOption
         selection.booleanExpression.simpleBooleanExpression should be(SimpleBooleanExpression("status", ComparisonOperator("="), StringValue("200")))
         selection.booleanExpression.nested should be(Seq())
+        query.between.startTime should be("2018-01-01T00:00:00Z")
+        query.between.endTime should be("2018-01-31T:23:59:59Z")
       }
 
       "parse multiple boolean expressions" in {
-        val queryString = "select status, time from requests where status='200' and size < 10 or time > 5"
+        val queryString = "select status, time from requests where status='200' and size < 10 or time > 5 between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z"
         val Success(query) = SqlParser.parse(queryString)
         val Some(selection) = query.selectionOption
         selection.booleanExpression.simpleBooleanExpression should be(SimpleBooleanExpression("status", ComparisonOperator("="), StringValue("200")))
@@ -48,6 +56,8 @@ class SqlParserTest extends WordSpec with Matchers {
           (BooleanOperator("and"), SimpleBooleanExpression("size", ComparisonOperator("<"), IntegerValue(10))),
           (BooleanOperator("or"), SimpleBooleanExpression("time", ComparisonOperator(">"), IntegerValue(5)))
         ))
+        query.between.startTime should be("2018-01-01T00:00:00Z")
+        query.between.endTime should be("2018-01-31T:23:59:59Z")
       }
     }
   }

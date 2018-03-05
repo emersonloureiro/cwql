@@ -1,6 +1,6 @@
 package cf.janga.sqlparser
 
-case class Query(projection: Projections, from: From, selectionOption: Option[Selection])
+case class Query(projection: Projections, from: From, selectionOption: Option[Selection], between: Between)
 
 case class Projections(values: Seq[Projection])
 
@@ -17,6 +17,8 @@ case class SimpleBooleanExpression(left: String, operator: ComparisonOperator, r
 case class ComparisonOperator(s: String)
 
 case class Projection(alias: Option[String], value: String)
+
+case class Between(startTime: String, endTime: String)
 
 sealed trait Value
 case class StringValue(value: String) extends Value

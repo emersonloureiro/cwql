@@ -14,11 +14,19 @@ object SqlParser {
 private class SqlParser(val input: ParserInput) extends Parser {
 
   def Sql = rule {
-    WSRule ~ SelectRule ~ WSRule ~ FromRule ~ WSRule ~ optional(WhereRule) ~ WSRule ~ EOI ~> {
-      (select, from, where) => {
-        Query(select, from, where.asInstanceOf[Option[Selection]])
+    WSRule ~ SelectRule ~ WSRule ~ FromRule ~ WSRule ~ optional(WhereRule) ~ WSRule ~ BetweenRule ~ WSRule ~ EOI ~> {
+      (select, from, where, between) => {
+        Query(select, from, where.asInstanceOf[Option[Selection]], between)
       }
     }
+  }
+
+  def BetweenRule = rule {
+    ignoreCase("between") ~ WSRule ~ TimestampRule ~ WSRule ~ ignoreCase("and") ~ WSRule ~ TimestampRule ~> Between
+  }
+
+  def TimestampRule = rule {
+    capture(oneOrMore(anyOf("0123456789-:+TZ")))
   }
 
   def SelectRule = rule {
