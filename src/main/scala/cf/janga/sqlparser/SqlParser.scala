@@ -14,11 +14,15 @@ object SqlParser {
 private class SqlParser(val input: ParserInput) extends Parser {
 
   def Sql = rule {
-    WSRule ~ SelectRule ~ WSRule ~ FromRule ~ WSRule ~ optional(WhereRule) ~ WSRule ~ BetweenRule ~ WSRule ~ EOI ~> {
-      (select, from, where, between) => {
-        Query(select, from, where.asInstanceOf[Option[Selection]], between)
+    WSRule ~ SelectRule ~ WSRule ~ FromRule ~ WSRule ~ optional(WhereRule) ~ WSRule ~ BetweenRule ~ WSRule ~ PeriodRule ~ WSRule ~ EOI ~> {
+      (select, from, where, between, period) => {
+        Query(select, from, where.asInstanceOf[Option[Selection]], between, period)
       }
     }
+  }
+
+  def PeriodRule = rule {
+    ignoreCase("period") ~ WSRule ~ IntegerRule ~> Period
   }
 
   def BetweenRule = rule {
@@ -82,11 +86,15 @@ private class SqlParser(val input: ParserInput) extends Parser {
   }
 
   def ConstantRule = rule {
-    StringRule | IntegerRule
+    StringRule | IntegerValueRule
+  }
+
+  def IntegerValueRule = rule {
+    IntegerRule ~> IntegerValue
   }
 
   def IntegerRule = rule {
-    capture(anyOf("123456789") ~ zeroOrMore(anyOf("1234567890"))) ~> (n => IntegerValue(n.toInt))
+    capture(anyOf("123456789") ~ zeroOrMore(anyOf("1234567890"))) ~> (n => n.toInt)
   }
 
   def StringRule = rule {

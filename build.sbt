@@ -1,8 +1,12 @@
-name := "sqlparser"
+import org.ensime.EnsimeCoursierKeys._
+
+name := "cwql"
 
 version := "1.0"
 
-scalaVersion := "2.12.2"
+scalaVersion in ThisBuild := "2.12.2"
+
+ensimeServerVersion in ThisBuild := "2.0.0-M1"
 
 libraryDependencies ++=  Seq(
   "org.parboiled" %% "parboiled" % "2.1.4",
