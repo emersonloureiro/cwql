@@ -4,14 +4,14 @@ import org.parboiled2._
 
 import scala.util.Try
 
-object SqlParser {
+object CwqlParser {
 
   def parse(query: String): Try[Query] = {
-    new SqlParser(query).Sql.run()
+    new CwqlParser(query).Sql.run()
   }
 }
 
-private class SqlParser(val input: ParserInput) extends Parser {
+private class CwqlParser(val input: ParserInput) extends Parser {
 
   def Sql = rule {
     WSRule ~ SelectRule ~ WSRule ~ FromRule ~ WSRule ~ optional(WhereRule) ~ WSRule ~ BetweenRule ~ WSRule ~ PeriodRule ~ WSRule ~ EOI ~> {
