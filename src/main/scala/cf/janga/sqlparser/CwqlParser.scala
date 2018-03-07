@@ -38,7 +38,7 @@ private class CwqlParser(val input: ParserInput) extends Parser {
   }
 
   def IdentifierRule = rule {
-    capture(oneOrMore(anyOf("abcdefghijklmnopqrstuvwyxz0123456789_")))
+    capture(oneOrMore(anyOf("AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwYyXxZz0123456789_")))
   }
 
   def ProjectionIdentifierRule = rule {
@@ -49,12 +49,12 @@ private class CwqlParser(val input: ParserInput) extends Parser {
     oneOrMore(ProjectionIdentifierRule).separatedBy(WSRule ~ str(",") ~ WSRule)
   }
 
-  def IdentifiersRule = rule {
-    oneOrMore(IdentifierRule).separatedBy(WSRule ~ str(",") ~ WSRule)
+  def NamespacesRule = rule {
+    oneOrMore(capture(oneOrMore(anyOf("AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwYyXxZz0123456789_/")))).separatedBy(WSRule ~ str(",") ~ WSRule)
   }
 
   def FromRule = rule {
-    ignoreCase("from") ~ WSRule ~ IdentifiersRule ~> From
+    ignoreCase("from") ~ WSRule ~ NamespacesRule ~> From
   }
 
   def WhereRule = rule {
