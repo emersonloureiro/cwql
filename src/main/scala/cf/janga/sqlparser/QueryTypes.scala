@@ -4,6 +4,8 @@ case class Query(projection: Projections, from: From, selectionOption: Option[Se
 
 case class Projections(values: Seq[Projection])
 
+case class Projection(statistic: Statistic, alias: Option[String], value: String)
+
 case class From(values: Seq[String])
 
 case class Selection(booleanExpression: BooleanExpression)
@@ -16,8 +18,6 @@ case class SimpleBooleanExpression(left: String, operator: ComparisonOperator, r
 
 case class ComparisonOperator(s: String)
 
-case class Projection(alias: Option[String], value: String)
-
 case class Between(startTime: String, endTime: String)
 
 case class Period(value: Int)
@@ -26,3 +26,5 @@ sealed trait Value
 case class StringValue(value: String) extends Value
 case class IntegerValue(value: Int) extends Value
 case class IdentifierValue(identifier: String) extends Value
+
+case class Statistic(value: String)

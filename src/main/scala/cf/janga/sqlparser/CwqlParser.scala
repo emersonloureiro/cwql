@@ -34,19 +34,23 @@ private class CwqlParser(val input: ParserInput) extends Parser {
   }
 
   def SelectRule = rule {
-    ignoreCase("select") ~ WSRule ~ ProjectionIdentifiersRule ~> Projections
+    ignoreCase("select") ~ WSRule ~ ProjectionStatisticsRule ~> Projections
   }
 
   def IdentifierRule = rule {
     capture(oneOrMore(anyOf("AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwYyXxZz0123456789_")))
   }
 
-  def ProjectionIdentifierRule = rule {
-    optional(IdentifierRule ~ ch('.')) ~ IdentifierRule ~> ((alias, id) => Projection(alias.asInstanceOf[Option[String]], id.asInstanceOf[String]))
+  def ProjectionStatisticRule = rule {
+    StatisticsRule ~ WSRule ~ ch('(') ~ WSRule ~ optional(IdentifierRule ~ ch('.')) ~ IdentifierRule ~ WSRule ~ ch(')') ~> ((statistic, alias, id) =>Projection(statistic.asInstanceOf[Statistic], alias.asInstanceOf[Option[String]], id.asInstanceOf[String]))
   }
 
-  def ProjectionIdentifiersRule = rule {
-    oneOrMore(ProjectionIdentifierRule).separatedBy(WSRule ~ str(",") ~ WSRule)
+  def StatisticsRule = rule {
+    (capture(ignoreCase("avg")) | capture(ignoreCase("sum")) | capture(ignoreCase("max")) | capture(ignoreCase("min"))) ~> Statistic
+  }
+
+  def ProjectionStatisticsRule = rule {
+    oneOrMore(ProjectionStatisticRule).separatedBy(WSRule ~ str(",") ~ WSRule)
   }
 
   def NamespacesRule = rule {
