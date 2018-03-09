@@ -6,7 +6,7 @@ import scala.util.Try
 
 object CwqlParser {
 
-  def parse(query: String): Try[Query] = {
+  def parse(query: String): Try[CwQuery] = {
     new CwqlParser(query).Sql.run()
   }
 }
@@ -16,7 +16,7 @@ private class CwqlParser(val input: ParserInput) extends Parser {
   def Sql = rule {
     WSRule ~ SelectRule ~ WSRule ~ FromRule ~ WSRule ~ optional(WhereRule) ~ WSRule ~ BetweenRule ~ WSRule ~ PeriodRule ~ WSRule ~ EOI ~> {
       (select, from, where, between, period) => {
-        Query(select, from, where.asInstanceOf[Option[Selection]], between, period)
+        CwQuery(select, from, where.asInstanceOf[Option[Selection]], between, period)
       }
     }
   }

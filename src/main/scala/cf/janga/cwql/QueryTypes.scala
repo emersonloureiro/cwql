@@ -1,6 +1,6 @@
 package cf.janga.cwql
 
-case class Query(projection: Projections, from: From, selectionOption: Option[Selection], between: Between, period: Period)
+case class CwQuery(projection: Projections, from: From, selectionOption: Option[Selection], between: Between, period: Period)
 
 case class Projections(values: Seq[Projection])
 
