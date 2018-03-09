@@ -1,4 +1,4 @@
-package cf.janga.sqlparser
+package cf.janga.cwql
 
 import org.scalatest.{Matchers, WordSpec}
 

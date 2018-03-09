@@ -1,4 +1,4 @@
-package cf.janga.sqlparser
+package cf.janga.cwql
 
 case class Query(projection: Projections, from: From, selectionOption: Option[Selection], between: Between, period: Period)
 
