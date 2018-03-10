@@ -1,4 +1,4 @@
-package cf.janga.cwql
+package cf.janga.cwql.parser
 
 case class CwQuery(projections: Seq[Projection], namespaces: Seq[Namespace], selectionOption: Option[Selection], between: Between, period: Period)
 

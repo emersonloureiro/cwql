@@ -1,10 +1,11 @@
-package cf.janga.cwql
+package cf.janga.cwql.planner
 
-import org.joda.time.DateTime
+import cf.janga.cwql.parser._
 import org.scalatest.{Matchers, WordSpec}
 import scala.collection.JavaConverters._
-import scala.util.Success
+import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
+import scala.util.Success
 
 class CwqlPlannerTest extends WordSpec with Matchers {
 

@@ -1,10 +1,11 @@
-package cf.janga.cwql
+package cf.janga.cwql.planner
 
-import scala.util.{Try, Success}
+import cf.janga.cwql.parser.CwQuery
 import com.amazonaws.services.cloudwatch.model.{GetMetricStatisticsRequest, Dimension}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.ISODateTimeFormat
 import scala.collection.JavaConverters._
+import scala.util.{Success, Try}
 
 object CwqlPlanner {
 

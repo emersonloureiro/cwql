@@ -1,4 +1,4 @@
-package cf.janga.cwql
+package cf.janga.cwql.parser
 
 import org.parboiled2._
 
