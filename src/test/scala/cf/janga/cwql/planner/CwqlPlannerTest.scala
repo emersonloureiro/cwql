@@ -19,7 +19,9 @@ class CwqlPlannerTest extends WordSpec with Matchers {
         val cwQuery = CwQuery(List(projection), List(namespace), None, between, period)
         val Success(cwQueryPlan) = CwqlPlanner.plan(cwQuery: CwQuery)
         cwQueryPlan.steps.size should be(1)
-        val CwRequestStep(cwRequest) = cwQueryPlan.steps.head
+        val CwRequestStep(cwRequests) = cwQueryPlan.steps.head
+        cwRequests.size should be(1)
+        val cwRequest = cwRequests.head
         cwRequest.getNamespace() should be(namespace.value)
         cwRequest.getStatistics().asScala should be(List("avg"))
         cwRequest.getMetricName() should be(projection.metric)
@@ -39,8 +41,10 @@ class CwqlPlannerTest extends WordSpec with Matchers {
         val period = Period(60)
         val cwQuery = CwQuery(List(avgProjection, sumProjection), List(namespace), None, between, period)
         val Success(cwQueryPlan) = CwqlPlanner.plan(cwQuery: CwQuery)
-        cwQueryPlan.steps.size should be(2)
-        val List(CwRequestStep(avgCwRequest), CwRequestStep(sumCwRequest)) = cwQueryPlan.steps
+        cwQueryPlan.steps.size should be(1)
+        val List(CwRequestStep(cwRequests)) = cwQueryPlan.steps
+        cwRequests.size should be(2)
+        val avgCwRequest = cwRequests(0)
         avgCwRequest.getNamespace() should be(namespace.value)
         avgCwRequest.getStatistics().asScala should be(List("avg"))
         avgCwRequest.getMetricName() should be(avgProjection.metric)
@@ -51,6 +55,7 @@ class CwqlPlannerTest extends WordSpec with Matchers {
         val avgRequestEndDateTime = formatter.parseDateTime(cwQuery.between.endTime)
         new DateTime(avgCwRequest.getEndTime()) should be(avgRequestEndDateTime)
 
+        val sumCwRequest = cwRequests(1)
         sumCwRequest.getNamespace() should be(namespace.value)
         sumCwRequest.getStatistics().asScala should be(List("sum"))
         sumCwRequest.getMetricName() should be(sumProjection.metric)

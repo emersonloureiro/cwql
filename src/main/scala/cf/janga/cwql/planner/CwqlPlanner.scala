@@ -24,14 +24,32 @@ object CwqlPlanner {
           request.setEndTime(endTime.toDate())
           request.setNamespace(namespace.value)
           request.setPeriod(cwQuery.period.value)
-          CwRequestStep(request)
+          request
         }
       }
-    Success(CwQueryPlan(requests))
+    Success(CwQueryPlan(Seq(CwRequestStep(requests))))
   }
 }
 
-case class CwQueryPlan(steps: Seq[Step])
+case class CwQueryPlan(steps: Seq[Step[_, _]])
 
-sealed trait Step
-case class CwRequestStep(request: GetMetricStatisticsRequest) extends Step
+sealed trait Step[I, O] {
+  def execute(inputOtion: Option[I]): O
+}
+
+case class CwRequestStep(requests: Seq[GetMetricStatisticsRequest]) extends Step[Unit, Unit] {
+
+  import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
+
+  val cwClient = AmazonCloudWatchClientBuilder.defaultClient()
+
+  override def execute(inputOption: Option[Unit]): Unit = {
+    requests.map {
+      request => {
+        val result = cwClient.getMetricStatistics(request)
+        result.getDatapoints
+      }
+    }
+    ()
+  }
+}
