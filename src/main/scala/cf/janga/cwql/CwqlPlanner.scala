@@ -23,13 +23,6 @@ object CwqlPlanner {
           request.setEndTime(endTime.toDate())
           request.setNamespace(namespace.value)
           request.setPeriod(cwQuery.period.value)
-          //        cwQuery.selectionOption.toList.map {
-//          selection => {
-//            selection.
-//        val dimension = new Dimension()
-//        dimension.setName()
-//          }
-//        }
           CwRequestStep(request)
         }
       }
