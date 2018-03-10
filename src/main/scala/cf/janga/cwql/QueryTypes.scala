@@ -1,12 +1,10 @@
 package cf.janga.cwql
 
-case class CwQuery(projection: Projections, from: From, selectionOption: Option[Selection], between: Between, period: Period)
+case class CwQuery(projections: Seq[Projection], namespaces: Seq[Namespace], selectionOption: Option[Selection], between: Between, period: Period)
 
-case class Projections(values: Seq[Projection])
+case class Projection(statistic: Statistic, alias: Option[String], metric: String)
 
-case class Projection(statistic: Statistic, alias: Option[String], value: String)
-
-case class From(values: Seq[String])
+case class Namespace(value: String)
 
 case class Selection(booleanExpression: BooleanExpression)
 

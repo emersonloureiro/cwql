@@ -1,0 +1,64 @@
+package cf.janga.cwql
+
+import org.joda.time.DateTime
+import org.scalatest.{Matchers, WordSpec}
+import scala.collection.JavaConverters._
+import scala.util.Success
+import org.joda.time.format.ISODateTimeFormat
+
+class CwqlPlannerTest extends WordSpec with Matchers {
+
+  "cqwl planner" when {
+    "given a cw query" should {
+      "plan a single request for a single metric" in {
+        val projection = Projection(Statistic("avg"), None, "time")
+        val namespace = Namespace("AWS/EC2")
+        val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
+        val period = Period(60)
+        val cwQuery = CwQuery(List(projection), List(namespace), None, between, period)
+        val Success(cwQueryPlan) = CwqlPlanner.plan(cwQuery: CwQuery)
+        cwQueryPlan.steps.size should be(1)
+        val CwRequestStep(cwRequest) = cwQueryPlan.steps.head
+        cwRequest.getNamespace() should be(namespace.value)
+        cwRequest.getStatistics().asScala should be(List("avg"))
+        cwRequest.getMetricName() should be(projection.metric)
+        cwRequest.getPeriod() should be(period.value)
+        val formatter = ISODateTimeFormat.dateTimeNoMillis()
+        val startDateTime = formatter.parseDateTime(cwQuery.between.startTime)
+        new DateTime(cwRequest.getStartTime()) should be(startDateTime)
+        val endDateTime = formatter.parseDateTime(cwQuery.between.endTime)
+        new DateTime(cwRequest.getEndTime()) should be(endDateTime)
+      }
+
+      "plan multiple requests for multiple metrics" in {
+        val avgProjection = Projection(Statistic("avg"), None, "time")
+        val sumProjection = Projection(Statistic("sum"), None, "reques_size")
+        val namespace = Namespace("AWS/EC2")
+        val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
+        val period = Period(60)
+        val cwQuery = CwQuery(List(avgProjection, sumProjection), List(namespace), None, between, period)
+        val Success(cwQueryPlan) = CwqlPlanner.plan(cwQuery: CwQuery)
+        cwQueryPlan.steps.size should be(2)
+        val List(CwRequestStep(avgCwRequest), CwRequestStep(sumCwRequest)) = cwQueryPlan.steps
+        avgCwRequest.getNamespace() should be(namespace.value)
+        avgCwRequest.getStatistics().asScala should be(List("avg"))
+        avgCwRequest.getMetricName() should be(avgProjection.metric)
+        avgCwRequest.getPeriod() should be(period.value)
+        val formatter = ISODateTimeFormat.dateTimeNoMillis()
+        val avgRequestStartDateTime = formatter.parseDateTime(cwQuery.between.startTime)
+        new DateTime(avgCwRequest.getStartTime()) should be(avgRequestStartDateTime)
+        val avgRequestEndDateTime = formatter.parseDateTime(cwQuery.between.endTime)
+        new DateTime(avgCwRequest.getEndTime()) should be(avgRequestEndDateTime)
+
+        sumCwRequest.getNamespace() should be(namespace.value)
+        sumCwRequest.getStatistics().asScala should be(List("sum"))
+        sumCwRequest.getMetricName() should be(sumProjection.metric)
+        sumCwRequest.getPeriod() should be(period.value)
+        val sumRequesStartDateTime = formatter.parseDateTime(cwQuery.between.startTime)
+        new DateTime(sumCwRequest.getStartTime()) should be(sumRequesStartDateTime)
+        val sumRequestEndDateTime = formatter.parseDateTime(cwQuery.between.endTime)
+        new DateTime(sumCwRequest.getEndTime()) should be(sumRequestEndDateTime)
+      }
+    }
+  }
+}

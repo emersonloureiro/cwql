@@ -15,8 +15,8 @@ private class CwqlParser(val input: ParserInput) extends Parser {
 
   def Sql = rule {
     WSRule ~ SelectRule ~ WSRule ~ FromRule ~ WSRule ~ optional(WhereRule) ~ WSRule ~ BetweenRule ~ WSRule ~ PeriodRule ~ WSRule ~ EOI ~> {
-      (select, from, where, between, period) => {
-        CwQuery(select, from, where.asInstanceOf[Option[Selection]], between, period)
+      (select, namespaces, where, between, period) => {
+        CwQuery(select, namespaces, where.asInstanceOf[Option[Selection]], between, period)
       }
     }
   }
@@ -34,7 +34,7 @@ private class CwqlParser(val input: ParserInput) extends Parser {
   }
 
   def SelectRule = rule {
-    ignoreCase("select") ~ WSRule ~ ProjectionStatisticsRule ~> Projections
+    ignoreCase("select") ~ WSRule ~ oneOrMore(ProjectionStatisticRule).separatedBy(WSRule ~ str(",") ~ WSRule)
   }
 
   def IdentifierRule = rule {
@@ -49,16 +49,13 @@ private class CwqlParser(val input: ParserInput) extends Parser {
     (capture(ignoreCase("avg")) | capture(ignoreCase("sum")) | capture(ignoreCase("max")) | capture(ignoreCase("min"))) ~> Statistic
   }
 
-  def ProjectionStatisticsRule = rule {
-    oneOrMore(ProjectionStatisticRule).separatedBy(WSRule ~ str(",") ~ WSRule)
-  }
-
   def NamespacesRule = rule {
-    oneOrMore(capture(oneOrMore(anyOf("AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwYyXxZz0123456789_/")))).separatedBy(WSRule ~ str(",") ~ WSRule)
+    oneOrMore(capture(oneOrMore(anyOf("AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwYyXxZz0123456789_/")))).separatedBy(WSRule ~ str(",") ~ WSRule) ~>
+      (namespaces => namespaces.map(Namespace))
   }
 
   def FromRule = rule {
-    ignoreCase("from") ~ WSRule ~ NamespacesRule ~> From
+    ignoreCase("from") ~ WSRule ~ NamespacesRule
   }
 
   def WhereRule = rule {
