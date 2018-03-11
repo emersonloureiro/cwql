@@ -25,4 +25,14 @@ case class StringValue(value: String) extends Value
 case class IntegerValue(value: Int) extends Value
 case class IdentifierValue(identifier: String) extends Value
 
-case class Statistic(value: String)
+case class Statistic(value: String) {
+
+  def toAws: String = {
+    value match {
+      case "avg" => "Average"
+      case "sum" => "Sum"
+      case "max" => "Maximum"
+      case "min" => "Minimum"
+    }
+  }
+}
