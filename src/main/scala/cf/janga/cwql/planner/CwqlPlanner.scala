@@ -1,6 +1,6 @@
 package cf.janga.cwql.planner
 
-import cf.janga.cwql.parser.{CwQuery, Projection}
+import cf.janga.cwql.parser.{Between, CwQuery, Period, Projection}
 import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProviderChain}
 import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsRequest
 import org.joda.time.format.ISODateTimeFormat
@@ -14,35 +14,40 @@ class CwqlPlanner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAW
 
   def plan(cwQuery: CwQuery): Try[CwQueryPlan] = {
     for {
-      groupedProjections <- index(cwQuery)
+      projectionsPerMetric <- groupProjectionsPerMetric(cwQuery)
+      cwRequestStep <- planCwRequestStep(projectionsPerMetric, cwQuery.between, cwQuery.period)
     } yield {
-      val requests =
-        groupedProjections.map {
-          groupedProjection => {
-            val request = new GetMetricStatisticsRequest()
-            request.setMetricName(groupedProjection.metric)
-            val formatter = ISODateTimeFormat.dateTimeNoMillis()
-            val startTime = formatter.parseDateTime(cwQuery.between.startTime)
-            request.setStartTime(startTime.toDate)
-            val endTime = formatter.parseDateTime(cwQuery.between.endTime)
-            request.setEndTime(endTime.toDate)
-            request.setNamespace(groupedProjection.namespace)
-            request.setPeriod(cwQuery.period.value)
-            val statistics =
-              groupedProjection.projections.foldLeft(List.empty[String]) {
-                case (foldedStatistics, projection) => {
-                  foldedStatistics ++ Seq(projection.statistic.toAws)
-                }
-              }
-            request.setStatistics(statistics.asJava)
-            request
-          }
-        }
-      CwQueryPlan(Seq(CwRequestStep(awsCredentialsProvider, requests)))
+      CwQueryPlan(Seq(cwRequestStep))
     }
   }
 
-  private def index(cwQuery: CwQuery): Try[Seq[GroupedProjections]] = {
+  private def planCwRequestStep(groupedProjections: Seq[GroupedProjections], between: Between, period: Period): Try[CwRequestStep] = {
+    val requests =
+      groupedProjections.map {
+        groupedProjection => {
+          val request = new GetMetricStatisticsRequest()
+          request.setMetricName(groupedProjection.metric)
+          val formatter = ISODateTimeFormat.dateTimeNoMillis()
+          val startTime = formatter.parseDateTime(between.startTime)
+          request.setStartTime(startTime.toDate)
+          val endTime = formatter.parseDateTime(between.endTime)
+          request.setEndTime(endTime.toDate)
+          request.setNamespace(groupedProjection.namespace)
+          request.setPeriod(period.value)
+          val statistics =
+            groupedProjection.projections.foldLeft(List.empty[String]) {
+              case (foldedStatistics, projection) => {
+                foldedStatistics ++ Seq(projection.statistic.toAws)
+              }
+            }
+          request.setStatistics(statistics.asJava)
+          request
+        }
+      }
+    Success(CwRequestStep(awsCredentialsProvider, requests))
+  }
+
+  private def groupProjectionsPerMetric(cwQuery: CwQuery): Try[Seq[GroupedProjections]] = {
     val groupedProjectionsMap =
       cwQuery.namespaces.foldLeft(Map.empty[String, GroupedProjections]) {
         case (groups, namespace) => {
