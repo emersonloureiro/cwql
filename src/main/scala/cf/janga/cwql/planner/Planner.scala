@@ -10,6 +10,8 @@ import scala.util.{Success, Try}
 
 case class CwQueryPlan(steps: Seq[Step])
 
+private case class GroupedProjections(namespace: String, metric: String, projections: Seq[Projection])
+
 class CwqlPlanner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCredentialsProviderChain()) {
 
   def plan(cwQuery: CwQuery): Try[CwQueryPlan] = {
@@ -71,17 +73,3 @@ class CwqlPlanner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAW
   }
 }
 
-case class GroupedProjections(namespace: String, metric: String, projections: Seq[Projection])
-
-case class ResultSet(records: Seq[Record])
-
-case class Record(values: Map[String, String] = Map.empty[String, String]) {
-
-  def +(record: Record): Record = {
-    Record(values ++ record.values)
-  }
-}
-
-trait Step {
-  def execute(inputOption: Option[ResultSet]): ResultSet
-}

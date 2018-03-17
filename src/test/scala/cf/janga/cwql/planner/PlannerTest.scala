@@ -8,7 +8,7 @@ import org.scalatest.{Matchers, WordSpec}
 import scala.collection.JavaConverters._
 import scala.util.Success
 
-class CwqlPlannerTest extends WordSpec with Matchers {
+class PlannerTest extends WordSpec with Matchers {
 
   "cqwl planner" when {
     "given a cw query" should {

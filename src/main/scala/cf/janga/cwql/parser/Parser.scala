@@ -1,17 +1,18 @@
 package cf.janga.cwql.parser
 
+import org.parboiled2.{Parser => ParboiledParser}
 import org.parboiled2._
 
 import scala.util.Try
 
-object CwqlParser {
+class Parser {
 
   def parse(query: String): Try[CwQuery] = {
-    new CwqlParser(query).Sql.run()
+    new InnerParser(query.stripMargin).Sql.run()
   }
 }
 
-private class CwqlParser(val input: ParserInput) extends Parser {
+private class InnerParser(val input: ParserInput) extends ParboiledParser {
 
   def Sql = rule {
     WSRule ~ SelectRule ~ WSRule ~ FromRule ~ WSRule ~ optional(WhereRule) ~ WSRule ~ BetweenRule ~ WSRule ~ PeriodRule ~ WSRule ~ EOI ~> {
@@ -42,7 +43,7 @@ private class CwqlParser(val input: ParserInput) extends Parser {
   }
 
   def ProjectionStatisticRule = rule {
-    StatisticsRule ~ WSRule ~ ch('(') ~ WSRule ~ optional(IdentifierRule ~ ch('.')) ~ IdentifierRule ~ WSRule ~ ch(')') ~> ((statistic, alias, id) =>Projection(statistic.asInstanceOf[Statistic], alias.asInstanceOf[Option[String]], id.asInstanceOf[String]))
+    StatisticsRule ~ WSRule ~ ch('(') ~ WSRule ~ optional(IdentifierRule ~ ch('.')) ~ IdentifierRule ~ WSRule ~ ch(')') ~> ((statistic, alias, id) => Projection(statistic.asInstanceOf[Statistic], alias.asInstanceOf[Option[String]], id.asInstanceOf[String]))
   }
 
   def StatisticsRule = rule {
