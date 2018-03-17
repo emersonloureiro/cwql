@@ -54,7 +54,7 @@ class ParserTest extends WordSpec with Matchers {
         val queryString = "select avg(size), avg(time) from requests where status='200' between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
         val Success(query) = new Parser().parse(queryString)
         val Some(selection) = query.selectionOption
-        selection.booleanExpression.simpleBooleanExpression should be(SimpleBooleanExpression("status", ComparisonOperator("="), StringValue("200")))
+        selection.booleanExpression.simpleBooleanExpression should be(SimpleBooleanExpression("status", Equals, StringValue("200")))
         selection.booleanExpression.nested should be(Seq())
         query.between.startTime should be("2018-01-01T00:00:00Z")
         query.between.endTime should be("2018-01-31T:23:59:59Z")
@@ -62,13 +62,13 @@ class ParserTest extends WordSpec with Matchers {
       }
 
       "parse multiple boolean expressions" in {
-        val queryString = "select max(size), sum(time) from requests where status='200' and size < 10 or time > 5 between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
+        val queryString = "select max(size), sum(time) from requests where status='200' and size = 10 and time = 5 between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
         val Success(query) = new Parser().parse(queryString)
         val Some(selection) = query.selectionOption
-        selection.booleanExpression.simpleBooleanExpression should be(SimpleBooleanExpression("status", ComparisonOperator("="), StringValue("200")))
+        selection.booleanExpression.simpleBooleanExpression should be(SimpleBooleanExpression("status", Equals, StringValue("200")))
         selection.booleanExpression.nested should be(Seq(
-          (BooleanOperator("and"), SimpleBooleanExpression("size", ComparisonOperator("<"), IntegerValue(10))),
-          (BooleanOperator("or"), SimpleBooleanExpression("time", ComparisonOperator(">"), IntegerValue(5)))
+          (And, SimpleBooleanExpression("size", Equals, IntegerValue(10))),
+          (And, SimpleBooleanExpression("time", Equals, IntegerValue(5)))
         ))
         query.between.startTime should be("2018-01-01T00:00:00Z")
         query.between.endTime should be("2018-01-31T:23:59:59Z")

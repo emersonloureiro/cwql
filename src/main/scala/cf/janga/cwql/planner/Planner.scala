@@ -1,16 +1,17 @@
 package cf.janga.cwql.planner
 
-import cf.janga.cwql.parser.{Between, CwQuery, Period, Projection}
+import cf.janga.cwql.parser._
 import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProviderChain}
 import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsRequest
 import org.joda.time.format.ISODateTimeFormat
+import CwQueryConversions._
 
 import scala.collection.JavaConverters._
 import scala.util.{Success, Try}
 
 case class CwQueryPlan(steps: Seq[Step])
 
-private case class GroupedProjections(namespace: String, metric: String, projections: Seq[Projection])
+private case class GroupedProjections(namespace: String, metric: String, projections: Seq[Projection], selectionOption: Option[Selection])
 
 class CwqlPlanner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCredentialsProviderChain()) {
 
@@ -43,6 +44,19 @@ class CwqlPlanner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAW
               }
             }
           request.setStatistics(statistics.asJava)
+          val dimensions = groupedProjection.selectionOption.toSeq.map {
+            selection => {
+              val requiredDimension = selection.booleanExpression.simpleBooleanExpression.toDimension
+              selection.booleanExpression.nested.foldLeft(Seq(requiredDimension)) {
+                case (foldedDimensions, (booleanOperator, booleanExpression)) => {
+                  booleanOperator match {
+                    case And => foldedDimensions ++ Seq(booleanExpression.toDimension)
+                  }
+                }
+              }
+            }
+          }
+          request.setDimensions(dimensions.flatten.asJava)
           request
         }
       }
@@ -58,11 +72,11 @@ class CwqlPlanner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAW
               val key = s"${namespace.value}-${projection.metric}"
               innerGroups.get(key) match {
                 case None => {
-                  innerGroups + (key -> GroupedProjections(namespace.value, projection.metric, Seq(projection)))
+                  innerGroups + (key -> GroupedProjections(namespace.value, projection.metric, Seq(projection), cwQuery.selectionOption))
                 }
                 case Some(existingGroupedProjections) => {
                   val newProjections = existingGroupedProjections.projections ++ Seq(projection)
-                  innerGroups + (key -> GroupedProjections(namespace.value, projection.metric, newProjections))
+                  innerGroups + (key -> GroupedProjections(namespace.value, projection.metric, newProjections, existingGroupedProjections.selectionOption))
                 }
               }
             }

@@ -68,7 +68,7 @@ private class InnerParser(val input: ParserInput) extends ParboiledParser {
   }
 
   def BooleanOperatorRule = rule {
-    (capture(ignoreCase("and")) | capture(ignoreCase("or"))) ~> BooleanOperator
+    capture(ignoreCase("and")) ~> (booleanOperator => BooleanOperator(booleanOperator))
   }
 
   def SimpleBooleanExpressionRule = rule {
@@ -76,15 +76,11 @@ private class InnerParser(val input: ParserInput) extends ParboiledParser {
   }
 
   def ValueRule = rule {
-    (ConstantRule | IdentifierValueRule)
-  }
-
-  def IdentifierValueRule = rule {
-    IdentifierRule ~> IdentifierValue
+    (ConstantRule)
   }
 
   def ComparisonOperatorRule = rule {
-    (capture(">") | capture("<") | capture(">=") | capture("<=") | capture("=") | capture("!=")) ~> ComparisonOperator
+    capture("=") ~> (operator => ComparisonOperator(operator))
   }
 
   def ConstantRule = rule {
