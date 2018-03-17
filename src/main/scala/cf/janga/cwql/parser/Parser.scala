@@ -47,7 +47,7 @@ private class InnerParser(val input: ParserInput) extends ParboiledParser {
   }
 
   def StatisticsRule = rule {
-    (capture(ignoreCase("avg")) | capture(ignoreCase("sum")) | capture(ignoreCase("max")) | capture(ignoreCase("min"))) ~> Statistic
+    (capture(ignoreCase("avg")) | capture(ignoreCase("sum")) | capture(ignoreCase("max")) | capture(ignoreCase("min"))) ~> ((statistic) => Statistic(statistic))
   }
 
   def NamespacesRule = rule {

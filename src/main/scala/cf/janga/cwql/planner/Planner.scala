@@ -32,15 +32,18 @@ class CwqlPlanner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAW
           request.setMetricName(groupedProjection.metric)
           val formatter = ISODateTimeFormat.dateTimeNoMillis()
           val startTime = formatter.parseDateTime(between.startTime)
-          request.setStartTime(startTime.toDate)
           val endTime = formatter.parseDateTime(between.endTime)
+          if (startTime.isAfter(endTime)) {
+            sys.error("Start time cannot be after end time")
+          }
+          request.setStartTime(startTime.toDate)
           request.setEndTime(endTime.toDate)
           request.setNamespace(groupedProjection.namespace)
           request.setPeriod(period.value)
           val statistics =
             groupedProjection.projections.foldLeft(List.empty[String]) {
               case (foldedStatistics, projection) => {
-                foldedStatistics ++ Seq(projection.statistic.toAws)
+                foldedStatistics ++ Seq(projection.statistic.toAwsStatistic)
               }
             }
           request.setStatistics(statistics.asJava)

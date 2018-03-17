@@ -36,14 +36,16 @@ sealed trait Value
 case class StringValue(value: String) extends Value
 case class IntegerValue(value: Int) extends Value
 
-case class Statistic(value: String) {
-
-  def toAws: String = {
-    value match {
-      case "avg" => "Average"
-      case "sum" => "Sum"
-      case "max" => "Maximum"
-      case "min" => "Minimum"
-    }
+object Statistic {
+  def apply(value: String): Statistic = value match {
+    case "avg" => Average
+    case "sum" => Sum
+    case "max" => Maximum
+    case "min" => Minimum
   }
 }
+sealed trait Statistic
+case object Average extends Statistic
+case object Sum extends Statistic
+case object Minimum extends Statistic
+case object Maximum extends Statistic
