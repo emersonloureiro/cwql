@@ -38,8 +38,9 @@ object Shell {
         readInput(reader, commandInterpreter)
       }
       case EmptyInput => readInput(reader, commandInterpreter)
-      case InvalidCommand(message) => {
-        println(message)
+      case InvalidInput(detailsOption) => {
+        val error = detailsOption.fold("Invalid input")(details => s"Invalid input: $details")
+        println(error)
         readInput(reader, commandInterpreter)
       }
     }
