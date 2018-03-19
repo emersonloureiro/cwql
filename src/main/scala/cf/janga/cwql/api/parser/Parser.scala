@@ -7,7 +7,7 @@ import scala.util.Try
 
 class Parser {
 
-  def parse(query: String): Try[CwQuery] = {
+  def parse(query: String): Try[Query] = {
     new InnerParser(query.stripMargin).Sql.run()
   }
 }
@@ -17,7 +17,7 @@ private class InnerParser(val input: ParserInput) extends ParboiledParser {
   def Sql = rule {
     WSRule ~ SelectRule ~ WSRule ~ FromRule ~ WSRule ~ optional(WhereRule) ~ WSRule ~ BetweenRule ~ WSRule ~ PeriodRule ~ WSRule ~ EOI ~> {
       (select, namespaces, where, between, period) => {
-        CwQuery(select, namespaces, where.asInstanceOf[Option[Selection]], between, period)
+        Query(select, namespaces, where.asInstanceOf[Option[Selection]], between, period)
       }
     }
   }

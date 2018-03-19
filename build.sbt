@@ -13,5 +13,6 @@ libraryDependencies ++=  Seq(
   "org.scalactic" %% "scalactic" % "3.0.4" % "test",
   "org.scalatest" %% "scalatest" % "3.0.4" % "test",
   "com.amazonaws" % "aws-java-sdk-cloudwatch" % "1.11.292",
-  "joda-time" % "joda-time" % "2.9.9"
+  "joda-time" % "joda-time" % "2.9.9",
+  "com.github.scopt" %% "scopt" % "3.7.0"
 )

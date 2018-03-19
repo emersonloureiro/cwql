@@ -2,7 +2,7 @@ package cf.janga.cwql.integration
 
 import cf.janga.cwql.api.executor.Executor
 import cf.janga.cwql.api.parser._
-import cf.janga.cwql.api.planner.CwqlPlanner
+import cf.janga.cwql.api.planner.Planner
 import org.scalatest.{Matchers, WordSpec}
 
 import scala.util.Success
@@ -27,7 +27,7 @@ class IntegrationTest extends WordSpec with Matchers {
         val Success(resultSet) =
           for {
             parsedQuery <- new Parser().parse(query)
-            plan <- new CwqlPlanner().plan(parsedQuery)
+            plan <- new Planner().plan(parsedQuery)
             resultSet <- new Executor().execute(plan.steps)
           } yield {
             resultSet

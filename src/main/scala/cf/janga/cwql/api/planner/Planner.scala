@@ -9,18 +9,18 @@ import CwQueryConversions._
 import scala.collection.JavaConverters._
 import scala.util.{Success, Try}
 
-case class CwQueryPlan(steps: Seq[Step])
+case class QueryPlan(steps: Seq[Step])
 
 private case class GroupedProjections(namespace: String, metric: String, projections: Seq[Projection], selectionOption: Option[Selection])
 
-class CwqlPlanner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCredentialsProviderChain()) {
+class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCredentialsProviderChain()) {
 
-  def plan(cwQuery: CwQuery): Try[CwQueryPlan] = {
+  def plan(query: Query): Try[QueryPlan] = {
     for {
-      projectionsPerMetric <- groupProjectionsPerMetric(cwQuery)
-      cwRequestStep <- planCwRequestStep(projectionsPerMetric, cwQuery.between, cwQuery.period)
+      projectionsPerMetric <- groupProjectionsPerMetric(query)
+      cwRequestStep <- planCwRequestStep(projectionsPerMetric, query.between, query.period)
     } yield {
-      CwQueryPlan(Seq(cwRequestStep))
+      QueryPlan(Seq(cwRequestStep))
     }
   }
 
@@ -66,7 +66,7 @@ class CwqlPlanner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAW
     Success(CwRequestStep(awsCredentialsProvider, requests))
   }
 
-  private def groupProjectionsPerMetric(cwQuery: CwQuery): Try[Seq[GroupedProjections]] = {
+  private def groupProjectionsPerMetric(cwQuery: Query): Try[Seq[GroupedProjections]] = {
     val groupedProjectionsMap =
       cwQuery.namespaces.foldLeft(Map.empty[String, GroupedProjections]) {
         case (groups, namespace) => {
