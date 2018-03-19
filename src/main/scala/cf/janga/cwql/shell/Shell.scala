@@ -5,7 +5,15 @@ import scala.annotation.tailrec
 
 case class ShellArguments(verbose: Boolean = false, profile: Option[String] = None)
 
-object Shell {
+object StdoutConsole extends Console {
+  override def writeln(string: String): Unit = {
+    println(string)
+  }
+}
+
+object Shell extends App {
+
+  start(args)
 
   def start(startupOptions: Array[String]): Unit = {
     val argumentParser = new OptionParser[ShellArguments]("cqwl") {
@@ -17,7 +25,7 @@ object Shell {
     argumentParser.parse(Option(startupOptions).getOrElse(Array.empty[String]).toSeq, ShellArguments()) match {
       case Some(shellArguments) => {
         println("cwql started!")
-        readInput(new InputReader(), new CommandInterpreter())
+        readInput(new InputReader(), new CommandInterpreter(StdoutConsole))
       }
       case None => // no-op error will be printed out by scopt
     }
@@ -27,22 +35,7 @@ object Shell {
   private def readInput(reader: InputReader, commandInterpreter: CommandInterpreter): Unit = {
     print("> ")
     val input = reader.readInput()
-    commandInterpreter.handle(input) match {
-      case Exit => println("Exiting...")
-      case QueryResult(Some(resultSet), _) => {
-        println(resultSet)
-        readInput(reader, commandInterpreter)
-      }
-      case QueryResult(_, Some(error)) => {
-        println(s"Error running query: $error")
-        readInput(reader, commandInterpreter)
-      }
-      case EmptyInput => readInput(reader, commandInterpreter)
-      case InvalidInput(detailsOption) => {
-        val error = detailsOption.fold("Invalid input")(details => s"Invalid input: $details")
-        println(error)
-        readInput(reader, commandInterpreter)
-      }
-    }
+    commandInterpreter.handle(input)
+    readInput(reader, commandInterpreter)
   }
 }
