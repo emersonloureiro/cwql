@@ -1,6 +1,6 @@
-package cf.janga.cwql.planner
+package cf.janga.cwql.api.planner
 
-import cf.janga.cwql.parser._
+import cf.janga.cwql.api.parser._
 import com.amazonaws.services.cloudwatch.model.Dimension
 
 object CwQueryConversions {

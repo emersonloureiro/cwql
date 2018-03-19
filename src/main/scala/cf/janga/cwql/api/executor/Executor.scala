@@ -1,6 +1,6 @@
-package cf.janga.cwql.executor
+package cf.janga.cwql.api.executor
 
-import cf.janga.cwql.planner.{ResultSet, Step}
+import cf.janga.cwql.api.planner.{ResultSet, Step}
 
 import scala.util.{Success, Try}
 
