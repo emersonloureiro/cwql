@@ -35,21 +35,27 @@ class CommandInterpreter(console: Console) {
   def handle(input: String): Unit = Option(input) match {
     case None => // no-op
     case Some(nonNullInput) if nonNullInput.trim().isEmpty => // no-op
-    case Some(_) => parseInput(input) match {
-      case Success(command) => command.run()
-      case Failure(error) => console.writeln(error.getMessage)
+    case Some(_) => {
+      for {
+        command <- parseInput(input)
+      } {
+        command.run()
+      }
     }
   }
 
-  private def parseInput(input: String): Try[Command] = {
+  private def parseInput(input: String): Option[Command] = {
     if (input.startsWith("\\")) {
       input match {
-        case "\\q" => Success(Exit(console))
-        case _ => Failure(new RuntimeException("unrecognized command"))
+        case "\\q" => Some(Exit(console))
+        case _ => {
+          console.writeln("Invalid command")
+          None
+        }
       }
     } else {
       // Assuming it's a query
-      Success(RunQuery(parser, planner, executor, input, console))
+      Some(RunQuery(parser, planner, executor, input, console))
     }
   }
 }

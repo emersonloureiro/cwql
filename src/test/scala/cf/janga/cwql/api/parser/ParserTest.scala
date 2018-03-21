@@ -10,7 +10,7 @@ class ParserTest extends WordSpec with Matchers {
     "given a basic query" should {
       "parse a single projection" in {
         val queryString = "select avg(time) from requests between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
-        val Success(query) = new Parser().parse(queryString)
+        val Right(query) = new Parser().parse(queryString)
         query.projections should be(Seq(Projection(Statistic("avg"), None, "time")))
         query.namespaces should be(Seq(Namespace("requests")))
         query.between.startTime should be("2018-01-01T00:00:00Z")
@@ -20,7 +20,7 @@ class ParserTest extends WordSpec with Matchers {
 
       "parse multiple projections" in {
         val queryString = "select avg(size), avg(time) from requests between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
-        val Success(query) = new Parser().parse(queryString)
+        val Right(query) = new Parser().parse(queryString)
         query.projections should be(Seq(Projection(Statistic("avg"), None, "size"), Projection(Statistic("avg"), None, "time")))
         query.namespaces should be(Seq(Namespace("requests")))
         query.between.startTime should be("2018-01-01T00:00:00Z")
@@ -30,7 +30,7 @@ class ParserTest extends WordSpec with Matchers {
 
       "parse projections with aliases" in {
         val queryString = "select max(alias1.size), min(alias2.time) from requests between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
-        val Success(query) = new Parser().parse(queryString)
+        val Right(query) = new Parser().parse(queryString)
         query.projections should be(Seq(Projection(Statistic("max"), Some("alias1"), "size"), Projection(Statistic("min"), Some("alias2"), "time")))
         query.namespaces should be(Seq(Namespace("requests")))
         query.between.startTime should be("2018-01-01T00:00:00Z")
@@ -40,7 +40,7 @@ class ParserTest extends WordSpec with Matchers {
 
       "parse CW namespace" in {
         val queryString = "select sum(alias1.size), sum(alias2.time) from AWS/EC2 between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
-        val Success(query) = new Parser().parse(queryString)
+        val Right(query) = new Parser().parse(queryString)
         query.projections should be(Seq(Projection(Statistic("sum"), Some("alias1"), "size"), Projection(Statistic("sum"), Some("alias2"), "time")))
         query.namespaces should be(Seq(Namespace("AWS/EC2")))
         query.between.startTime should be("2018-01-01T00:00:00Z")
@@ -52,7 +52,7 @@ class ParserTest extends WordSpec with Matchers {
     "given a where clause" should {
       "parse a single boolean expression" in {
         val queryString = "select avg(size), avg(time) from requests where status='200' between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
-        val Success(query) = new Parser().parse(queryString)
+        val Right(query) = new Parser().parse(queryString)
         val Some(selection) = query.selectionOption
         selection.booleanExpression.simpleBooleanExpression should be(SimpleBooleanExpression("status", Equals, StringValue("200")))
         selection.booleanExpression.nested should be(Seq())
@@ -63,7 +63,7 @@ class ParserTest extends WordSpec with Matchers {
 
       "parse multiple boolean expressions" in {
         val queryString = "select max(size), sum(time) from requests where status='200' and size = 10 and time = 5 between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
-        val Success(query) = new Parser().parse(queryString)
+        val Right(query) = new Parser().parse(queryString)
         val Some(selection) = query.selectionOption
         selection.booleanExpression.simpleBooleanExpression should be(SimpleBooleanExpression("status", Equals, StringValue("200")))
         selection.booleanExpression.nested should be(Seq(

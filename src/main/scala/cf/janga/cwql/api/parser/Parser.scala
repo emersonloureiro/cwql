@@ -3,19 +3,27 @@ package cf.janga.cwql.api.parser
 import org.parboiled2.{Parser => ParboiledParser}
 import org.parboiled2._
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
+
+case class ParserError(line: Int, column: Int) extends RuntimeException
 
 class Parser {
 
-  def parse(query: String): Try[Query] = {
-    new InnerParser(query.stripMargin).Sql.run()
+  def parse(query: String): Either[ParserError, Query] = {
+    new InnerParser(query.stripMargin).Sql.run() match {
+      case Success(query) => Right(query)
+      case Failure(ParseError(position, principalPosition, traces)) => {
+        println(principalPosition)
+        Left(ParserError(principalPosition.line, principalPosition.column))
+      }
+    }
   }
 }
 
 private class InnerParser(val input: ParserInput) extends ParboiledParser {
 
   def Sql = rule {
-    WSRule ~ SelectRule ~ WSRule ~ FromRule ~ WSRule ~ optional(WhereRule) ~ WSRule ~ BetweenRule ~ WSRule ~ PeriodRule ~ WSRule ~ EOI ~> {
+    NonRequiredSpaceRule ~ SelectRule ~ NonRequiredSpaceRule ~ FromRule ~ NonRequiredSpaceRule ~ optional(WhereRule) ~ NonRequiredSpaceRule ~ BetweenRule ~ RequiredSpaceRule ~ PeriodRule ~ NonRequiredSpaceRule ~ EOI ~> {
       (select, namespaces, where, between, period) => {
         Query(select, namespaces, where.asInstanceOf[Option[Selection]], between, period)
       }
@@ -23,11 +31,11 @@ private class InnerParser(val input: ParserInput) extends ParboiledParser {
   }
 
   def PeriodRule = rule {
-    ignoreCase("period") ~ WSRule ~ IntegerRule ~> Period
+    ignoreCase("period") ~ RequiredSpaceRule ~ IntegerRule ~> Period
   }
 
   def BetweenRule = rule {
-    ignoreCase("between") ~ WSRule ~ TimestampRule ~ WSRule ~ ignoreCase("and") ~ WSRule ~ TimestampRule ~> Between
+    ignoreCase("between") ~ RequiredSpaceRule ~ TimestampRule ~ RequiredSpaceRule ~ ignoreCase("and") ~ RequiredSpaceRule ~ TimestampRule ~> Between
   }
 
   def TimestampRule = rule {
@@ -35,7 +43,7 @@ private class InnerParser(val input: ParserInput) extends ParboiledParser {
   }
 
   def SelectRule = rule {
-    ignoreCase("select") ~ WSRule ~ oneOrMore(ProjectionStatisticRule).separatedBy(WSRule ~ str(",") ~ WSRule)
+    ignoreCase("select") ~ RequiredSpaceRule ~ oneOrMore(ProjectionStatisticRule).separatedBy(NonRequiredSpaceRule ~ str(",") ~ NonRequiredSpaceRule)
   }
 
   def IdentifierRule = rule {
@@ -43,7 +51,7 @@ private class InnerParser(val input: ParserInput) extends ParboiledParser {
   }
 
   def ProjectionStatisticRule = rule {
-    StatisticsRule ~ WSRule ~ ch('(') ~ WSRule ~ optional(IdentifierRule ~ ch('.')) ~ IdentifierRule ~ WSRule ~ ch(')') ~> ((statistic, alias, id) => Projection(statistic.asInstanceOf[Statistic], alias.asInstanceOf[Option[String]], id.asInstanceOf[String]))
+    StatisticsRule ~ ch('(') ~ optional(IdentifierRule ~ ch('.')) ~ IdentifierRule ~ ch(')') ~> ((statistic, alias, id) => Projection(statistic.asInstanceOf[Statistic], alias.asInstanceOf[Option[String]], id.asInstanceOf[String]))
   }
 
   def StatisticsRule = rule {
@@ -51,20 +59,20 @@ private class InnerParser(val input: ParserInput) extends ParboiledParser {
   }
 
   def NamespacesRule = rule {
-    oneOrMore(capture(oneOrMore(anyOf("AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwYyXxZz0123456789_/")))).separatedBy(WSRule ~ str(",") ~ WSRule) ~>
+    oneOrMore(capture(oneOrMore(anyOf("AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwYyXxZz0123456789_/")))).separatedBy(NonRequiredSpaceRule ~ str(",") ~ NonRequiredSpaceRule) ~>
       (namespaces => namespaces.map(Namespace))
   }
 
   def FromRule = rule {
-    ignoreCase("from") ~ WSRule ~ NamespacesRule
+    ignoreCase("from") ~ RequiredSpaceRule ~ NamespacesRule
   }
 
   def WhereRule = rule {
-    ignoreCase("where") ~ WSRule ~ BooleanExpressionRule ~> Selection
+    ignoreCase("where") ~ RequiredSpaceRule ~ BooleanExpressionRule ~> Selection
   }
 
   def BooleanExpressionRule = rule {
-    SimpleBooleanExpressionRule ~ zeroOrMore(WSRule ~ BooleanOperatorRule ~ WSRule ~ SimpleBooleanExpressionRule ~ WSRule ~> ((rule, expression) => (rule, expression))) ~> ((rule: SimpleBooleanExpression, nestedExpressions) => BooleanExpression(rule, nestedExpressions.asInstanceOf[Seq[(BooleanOperator, SimpleBooleanExpression)]]))
+    SimpleBooleanExpressionRule ~ zeroOrMore(RequiredSpaceRule ~ BooleanOperatorRule ~ RequiredSpaceRule ~ SimpleBooleanExpressionRule ~> ((rule, expression) => (rule, expression))) ~> ((rule: SimpleBooleanExpression, nestedExpressions) => BooleanExpression(rule, nestedExpressions.asInstanceOf[Seq[(BooleanOperator, SimpleBooleanExpression)]]))
   }
 
   def BooleanOperatorRule = rule {
@@ -72,11 +80,11 @@ private class InnerParser(val input: ParserInput) extends ParboiledParser {
   }
 
   def SimpleBooleanExpressionRule = rule {
-    IdentifierRule ~ WSRule ~ ComparisonOperatorRule ~ WSRule ~ ValueRule ~> SimpleBooleanExpression
+    IdentifierRule ~ NonRequiredSpaceRule ~ ComparisonOperatorRule ~ NonRequiredSpaceRule ~ ValueRule ~> SimpleBooleanExpression
   }
 
   def ValueRule = rule {
-    (ConstantRule)
+    ConstantRule
   }
 
   def ComparisonOperatorRule = rule {
@@ -96,10 +104,14 @@ private class InnerParser(val input: ParserInput) extends ParboiledParser {
   }
 
   def StringRule = rule {
-    ('\'' ~ WSRule ~ capture(zeroOrMore(!'\'' ~ ANY)) ~ WSRule ~ '\'') ~> (a => StringValue(a))
+    ('\'' ~ NonRequiredSpaceRule ~ capture(zeroOrMore(!'\'' ~ ANY)) ~ NonRequiredSpaceRule ~ '\'') ~> (a => StringValue(a))
   }
 
-  def WSRule = rule {
+  def RequiredSpaceRule = rule {
+    oneOrMore(anyOf(" \t \n"))
+  }
+
+  def NonRequiredSpaceRule = rule {
     zeroOrMore(anyOf(" \t \n"))
   }
 }

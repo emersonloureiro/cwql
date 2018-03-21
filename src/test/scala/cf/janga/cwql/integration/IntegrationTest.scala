@@ -24,9 +24,9 @@ class IntegrationTest extends WordSpec with Matchers {
             |PERIOD 60
           """.stripMargin
 
+        val Right(parsedQuery) = new Parser().parse(query)
         val Success(resultSet) =
           for {
-            parsedQuery <- new Parser().parse(query)
             plan <- new Planner().plan(parsedQuery)
             resultSet <- new Executor().execute(plan.steps)
           } yield {
