@@ -20,25 +20,25 @@ case class RunQuery(parser: Parser, planner: Planner, executor: Executor, query:
       for {
         parsedQuery <- parser.parse(query)
         queryPlan <- planner.plan(parsedQuery)
-      } yield queryPlan
+        resultSet <- executor.execute(queryPlan.steps).toEither
+      } yield resultSet
 
     planning match {
+      case Right(resultSet) => console.writeln(s"$resultSet")
       case Left(ParserError(line, column)) => {
         console.writeln(s"Parsing error: line $line, column $column")
         val emptySpaces = 1.until(column).foldLeft("")((output, _) => output + " ")
         console.writeln(query)
         console.writeln(s"$emptySpaces^")
       }
-      case Left(plannerError) => {
+      case Left(plannerError: PlannerError) => {
         plannerError match {
           case StartTimeAfterEndTime => console.writeln("Start time after end time")
         }
       }
-      case Right(queryPlan) => {
-        executor.execute(queryPlan.steps) match {
-          case Success(resultSet) => console.writeln(s"$resultSet")
-          case Failure(error) => console.writeln(s"$error")
-        }
+      case Left(exception: Throwable) => {
+        console.writeln("Internal error")
+        exception.printStackTrace()
       }
     }
   }
