@@ -11,7 +11,7 @@ class Parser {
 
   def parse(query: String): Either[ParserError, Query] = {
     new InnerParser(query.stripMargin).Sql.run() match {
-      case Success(query) => Right(query)
+      case Success(parsedQuery) => Right(parsedQuery)
       case Failure(ParseError(position, principalPosition, traces)) => {
         println(principalPosition)
         Left(ParserError(principalPosition.line, principalPosition.column))

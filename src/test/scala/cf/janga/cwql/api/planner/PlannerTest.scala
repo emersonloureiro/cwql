@@ -6,7 +6,6 @@ import org.joda.time.format.ISODateTimeFormat
 import org.scalatest.{Matchers, WordSpec}
 
 import scala.collection.JavaConverters._
-import scala.util.{Failure, Success}
 
 class PlannerTest extends WordSpec with Matchers {
 
@@ -18,7 +17,7 @@ class PlannerTest extends WordSpec with Matchers {
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
         val cwQuery = Query(List(projection), List(namespace), None, between, period)
-        val Success(cwQueryPlan) = new Planner().plan(cwQuery)
+        val Right(cwQueryPlan) = new Planner().plan(cwQuery)
         cwQueryPlan.steps.size should be(1)
         val CwRequestStep(_, cwRequests) = cwQueryPlan.steps.head
         cwRequests.size should be(1)
@@ -41,7 +40,7 @@ class PlannerTest extends WordSpec with Matchers {
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
         val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), None, between, period)
-        val Success(cwQueryPlan) = new Planner().plan(cwQuery)
+        val Right(cwQueryPlan) = new Planner().plan(cwQuery)
         cwQueryPlan.steps.size should be(1)
         val CwRequestStep(_, cwRequests) = cwQueryPlan.steps.head
         cwRequests.size should be(1)
@@ -65,7 +64,7 @@ class PlannerTest extends WordSpec with Matchers {
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
         val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), None, between, period)
-        val Success(cwQueryPlan) = new Planner().plan(cwQuery)
+        val Right(cwQueryPlan) = new Planner().plan(cwQuery)
         cwQueryPlan.steps.size should be(1)
         val List(CwRequestStep(_, cwRequests)) = cwQueryPlan.steps
         cwRequests.size should be(2)
@@ -98,7 +97,8 @@ class PlannerTest extends WordSpec with Matchers {
         val between = Between("2018-01-01T10:00:00Z", "2018-01-01T00:00:00Z")
         val period = Period(60)
         val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), None, between, period)
-        val Failure(_) = new Planner().plan(cwQuery)
+        val Left(planningError) = new Planner().plan(cwQuery)
+        planningError should be(StartTimeAfterEndTime)
       }
     }
   }

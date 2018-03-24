@@ -13,29 +13,32 @@ case class QueryPlan(steps: Seq[Step])
 
 private case class GroupedProjections(namespace: String, metric: String, projections: Seq[Projection], selectionOption: Option[Selection])
 
+sealed trait PlannerError
+case object StartTimeAfterEndTime extends PlannerError
+
 class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCredentialsProviderChain()) {
 
-  def plan(query: Query): Try[QueryPlan] = {
+  def plan(query: Query): Either[PlannerError, QueryPlan] = {
     for {
       projectionsPerMetric <- groupProjectionsPerMetric(query)
-      cwRequestStep <- planCwRequestStep(projectionsPerMetric, query.between, query.period)
+      cwRequestStep <- planCwRequestStep(projectionsPerMetric, query.between, query.period, Seq.empty)
     } yield {
       QueryPlan(Seq(cwRequestStep))
     }
   }
 
-  private def planCwRequestStep(groupedProjections: Seq[GroupedProjections], between: Between, period: Period): Try[CwRequestStep] = {
-    val requests =
-      groupedProjections.map {
-        groupedProjection => {
-          val request = new GetMetricStatisticsRequest()
-          request.setMetricName(groupedProjection.metric)
-          val formatter = ISODateTimeFormat.dateTimeNoMillis()
-          val startTime = formatter.parseDateTime(between.startTime)
-          val endTime = formatter.parseDateTime(between.endTime)
-          if (startTime.isAfter(endTime)) {
-            sys.error("Start time cannot be after end time")
-          }
+  private def planCwRequestStep(groupedProjections: Seq[GroupedProjections], between: Between, period: Period,
+                                currentRequests: Iterable[GetMetricStatisticsRequest]): Either[PlannerError, CwRequestStep] = {
+    groupedProjections.headOption match {
+      case Some(groupedProjection) => {
+        val request = new GetMetricStatisticsRequest()
+        request.setMetricName(groupedProjection.metric)
+        val formatter = ISODateTimeFormat.dateTimeNoMillis()
+        val startTime = formatter.parseDateTime(between.startTime)
+        val endTime = formatter.parseDateTime(between.endTime)
+        if (startTime.isAfter(endTime)) {
+          Left(StartTimeAfterEndTime)
+        } else {
           request.setStartTime(startTime.toDate)
           request.setEndTime(endTime.toDate)
           request.setNamespace(groupedProjection.namespace)
@@ -60,13 +63,14 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
             }
           }
           request.setDimensions(dimensions.flatten.asJava)
-          request
+          planCwRequestStep(groupedProjections.tail, between, period, currentRequests ++ Iterable(request))
         }
       }
-    Success(CwRequestStep(awsCredentialsProvider, requests))
+      case None => Right(CwRequestStep(awsCredentialsProvider, currentRequests.toSeq))
+    }
   }
 
-  private def groupProjectionsPerMetric(cwQuery: Query): Try[Seq[GroupedProjections]] = {
+  private def groupProjectionsPerMetric(cwQuery: Query): Either[PlannerError, Seq[GroupedProjections]] = {
     val groupedProjectionsMap =
       cwQuery.namespaces.foldLeft(Map.empty[String, GroupedProjections]) {
         case (groups, namespace) => {
@@ -86,7 +90,7 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
           }
         }
       }
-    Success(groupedProjectionsMap.values.toSeq)
+    Right(groupedProjectionsMap.values.toSeq)
   }
 }
 
