@@ -7,7 +7,6 @@ import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
 
 import scala.collection.JavaConverters._
-import scala.util.{Success, Try}
 
 case class DatapointStatistic(statistic: String, value: Double)
 
@@ -15,7 +14,7 @@ case class CwRequestStep(awsCredentialsProvider: AWSCredentialsProvider, request
 
   private val cwClient = AmazonCloudWatchClientBuilder.standard().withCredentials(awsCredentialsProvider).build()
 
-  override def execute(inputOption: Option[ResultSet]): Try[ResultSet] = {
+  override def execute(inputOption: Option[ResultSet]): ResultSet = {
     val hashJoin = new HashJoin()
     requests.foreach {
       request => {
@@ -35,7 +34,7 @@ case class CwRequestStep(awsCredentialsProvider: AWSCredentialsProvider, request
         }
       }
     }
-    Success(ResultSet(hashJoin.result()))
+    ResultSet(hashJoin.result())
   }
 
   private def getStatistics(datapoint: Datapoint, request: GetMetricStatisticsRequest): (Seq[DatapointStatistic]) = {

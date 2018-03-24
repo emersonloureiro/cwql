@@ -12,7 +12,7 @@ class Executor {
 
   private def executeInternal(previousStepOutput: Option[ResultSet], steps: Seq[Step]): Try[ResultSet] = steps match {
     case nextStep :: remainingSteps => {
-      nextStep.execute(previousStepOutput).flatMap {
+      Try(nextStep.execute(previousStepOutput)).flatMap {
         stepResult => executeInternal(Some(stepResult), remainingSteps)
       }
     }

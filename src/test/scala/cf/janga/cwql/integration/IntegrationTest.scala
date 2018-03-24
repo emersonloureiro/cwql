@@ -24,19 +24,15 @@ class IntegrationTest extends WordSpec with Matchers {
             |PERIOD 60
           """.stripMargin
 
-        val Right(plan) =
+        val Right(_) =
           for {
             parsedQuery <- new Parser().parse(query)
             plan <- new Planner().plan(parsedQuery)
-          } yield plan
-
-        val Success(resultSet) =
-          for {
-            resultSet <- new Executor().execute(plan.steps)
+            resultSet <- new Executor().execute(plan.steps).toEither
           } yield {
+            println(resultSet)
             resultSet
           }
-        println(resultSet)
       }
     }
   }
