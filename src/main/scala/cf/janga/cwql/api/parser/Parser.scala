@@ -23,7 +23,7 @@ class Parser {
 private class InnerParser(val input: ParserInput) extends ParboiledParser {
 
   def Sql = rule {
-    NonRequiredSpaceRule ~ SelectRule ~ NonRequiredSpaceRule ~ FromRule ~ NonRequiredSpaceRule ~ optional(WhereRule) ~ NonRequiredSpaceRule ~ BetweenRule ~ RequiredSpaceRule ~ PeriodRule ~ NonRequiredSpaceRule ~ EOI ~> {
+    NonRequiredSpaceRule ~ SelectRule ~ RequiredSpaceRule ~ FromRule ~ RequiredSpaceRule ~ optional(WhereRule ~ RequiredSpaceRule) ~ BetweenRule ~ RequiredSpaceRule ~ PeriodRule ~ NonRequiredSpaceRule ~ EOI ~> {
       (select, namespaces, where, between, period) => {
         Query(select, namespaces, where.asInstanceOf[Option[Selection]], between, period)
       }
@@ -59,8 +59,9 @@ private class InnerParser(val input: ParserInput) extends ParboiledParser {
   }
 
   def NamespacesRule = rule {
-    oneOrMore(capture(oneOrMore(anyOf("AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwYyXxZz0123456789_/")))).separatedBy(NonRequiredSpaceRule ~ str(",") ~ NonRequiredSpaceRule) ~>
-      (namespaces => namespaces.map(Namespace))
+    oneOrMore(capture(oneOrMore(anyOf("AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwYyXxZz0123456789_/")))
+      ~ optional(RequiredSpaceRule ~ ignoreCase("as") ~ RequiredSpaceRule ~ IdentifierRule) ~> ((namespace, alias) => (namespace, alias))).separatedBy(NonRequiredSpaceRule ~ str(",") ~ NonRequiredSpaceRule) ~>
+      (namespaces => namespaces.map(namespace => Namespace(namespace._1, namespace._2.asInstanceOf[Option[String]])))
   }
 
   def FromRule = rule {

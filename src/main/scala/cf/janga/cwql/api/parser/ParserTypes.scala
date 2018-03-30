@@ -4,7 +4,7 @@ case class Query(projections: Seq[Projection], namespaces: Seq[Namespace], selec
 
 case class Projection(statistic: Statistic, alias: Option[String], metric: String)
 
-case class Namespace(value: String)
+case class Namespace(value: String, aliasOption: Option[String])
 
 case class Selection(booleanExpression: BooleanExpression)
 

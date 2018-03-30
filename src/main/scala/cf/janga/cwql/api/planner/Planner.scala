@@ -14,13 +14,16 @@ case class QueryPlan(steps: Seq[Step])
 private case class GroupedProjections(namespace: String, metric: String, projections: Seq[Projection], selectionOption: Option[Selection])
 
 sealed trait PlannerError
+
 case object StartTimeAfterEndTime extends PlannerError
+
+case class NoMatchingNamespace(projection: Projection) extends PlannerError
 
 class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCredentialsProviderChain()) {
 
   def plan(query: Query): Either[PlannerError, QueryPlan] = {
     for {
-      projectionsPerMetric <- groupProjectionsPerMetric(query)
+      projectionsPerMetric <- groupProjectionsPerMetric(query.projections, query.namespaces, query.selectionOption, Map.empty)
       cwRequestStep <- planCwRequestStep(projectionsPerMetric, query.between, query.period, Seq.empty)
     } yield {
       QueryPlan(Seq(cwRequestStep))
@@ -70,27 +73,38 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
     }
   }
 
-  private def groupProjectionsPerMetric(cwQuery: Query): Either[PlannerError, Seq[GroupedProjections]] = {
-    val groupedProjectionsMap =
-      cwQuery.namespaces.foldLeft(Map.empty[String, GroupedProjections]) {
-        case (groups, namespace) => {
-          cwQuery.projections.foldLeft(groups) {
-            case (innerGroups, projection) => {
-              val key = s"${namespace.value}-${projection.metric}"
-              innerGroups.get(key) match {
-                case None => {
-                  innerGroups + (key -> GroupedProjections(namespace.value, projection.metric, Seq(projection), cwQuery.selectionOption))
-                }
-                case Some(existingGroupedProjections) => {
-                  val newProjections = existingGroupedProjections.projections ++ Seq(projection)
-                  innerGroups + (key -> GroupedProjections(namespace.value, projection.metric, newProjections, existingGroupedProjections.selectionOption))
-                }
-              }
+  private def groupProjectionsPerMetric(projections: Seq[Projection],
+                                        namespaces: Seq[Namespace],
+                                        selectionOption: Option[Selection],
+                                        groupedProjectionsMap: Map[String, GroupedProjections]): Either[PlannerError, Seq[GroupedProjections]] = projections.headOption match {
+    case Some(projection)=> {
+      val matchingNamespace =
+        namespaces.collectFirst {
+          case Namespace(namespaceName, Some(namespaceAlias)) if projection.alias.isDefined && projection.alias.get == namespaceAlias => {
+            (s"$namespaceName-$namespaceAlias-${projection.metric}", namespaceName)
+          }
+          case Namespace(namespaceName, None) if projection.alias.isEmpty && namespaces.size == 1 => {
+            (s"$namespaceName-${projection.metric}", namespaceName)
+          }
+        }
+      matchingNamespace match {
+        case Some((key, namespace)) => {
+          groupedProjectionsMap.get(key) match {
+            case None => {
+              val newMap = groupedProjectionsMap + (key -> GroupedProjections(namespace, projection.metric, Seq(projection), selectionOption))
+              groupProjectionsPerMetric(projections.tail, namespaces, selectionOption, newMap)
+            }
+            case Some(existingGroupedProjections) => {
+              val newProjections = existingGroupedProjections.projections ++ Seq(projection)
+              val newMap = groupedProjectionsMap + (key -> GroupedProjections(namespace, projection.metric, newProjections, existingGroupedProjections.selectionOption))
+              groupProjectionsPerMetric(projections.tail, namespaces, selectionOption, newMap)
             }
           }
         }
+        case None => Left(NoMatchingNamespace(projection))
       }
-    Right(groupedProjectionsMap.values.toSeq)
+    }
+    case None => Right(groupedProjectionsMap.values.toSeq)
   }
 }
 

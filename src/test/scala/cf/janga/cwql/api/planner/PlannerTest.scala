@@ -13,7 +13,7 @@ class PlannerTest extends WordSpec with Matchers {
     "given a cw query" should {
       "plan a single request for a single statistic of a single metric" in {
         val projection = Projection(Statistic("avg"), None, "time")
-        val namespace = Namespace("AWS/EC2")
+        val namespace = Namespace("AWS/EC2", None)
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
         val cwQuery = Query(List(projection), List(namespace), None, between, period)
@@ -36,7 +36,7 @@ class PlannerTest extends WordSpec with Matchers {
       "plan a single request for multiple statistics of a single metric" in {
         val avgProjection = Projection(Statistic("avg"), None, "time")
         val sumProjection = Projection(Statistic("sum"), None, "time")
-        val namespace = Namespace("AWS/EC2")
+        val namespace = Namespace("AWS/EC2", None)
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
         val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), None, between, period)
@@ -60,7 +60,7 @@ class PlannerTest extends WordSpec with Matchers {
       "plan multiple requests for multiple metrics" in {
         val avgProjection = Projection(Statistic("avg"), None, "time")
         val sumProjection = Projection(Statistic("sum"), None, "request_size")
-        val namespace = Namespace("AWS/EC2")
+        val namespace = Namespace("AWS/EC2", None)
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
         val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), None, between, period)
@@ -93,12 +93,47 @@ class PlannerTest extends WordSpec with Matchers {
       "fail when start time is after end time" in {
         val avgProjection = Projection(Statistic("avg"), None, "time")
         val sumProjection = Projection(Statistic("sum"), None, "request_size")
-        val namespace = Namespace("AWS/EC2")
+        val namespace = Namespace("AWS/EC2", None)
         val between = Between("2018-01-01T10:00:00Z", "2018-01-01T00:00:00Z")
         val period = Period(60)
         val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), None, between, period)
         val Left(planningError) = new Planner().plan(cwQuery)
         planningError should be(StartTimeAfterEndTime)
+      }
+
+      "fail when namespace alias isn't used on projections" in {
+        val avgProjection = Projection(Statistic("avg"), None, "time")
+        val sumProjection = Projection(Statistic("sum"), None, "time")
+        val namespace = Namespace("AWS/EC2", Some("ec2"))
+        val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
+        val period = Period(60)
+        val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), None, between, period)
+        val Left(planningError) = new Planner().plan(cwQuery)
+        planningError should be(NoMatchingNamespace(avgProjection))
+      }
+
+      "plan a request with namespace aliases" in {
+        val avgProjection = Projection(Statistic("avg"), Some("ec2"), "time")
+        val sumProjection = Projection(Statistic("sum"), Some("ec2"), "time")
+        val namespace = Namespace("AWS/EC2", Some("ec2"))
+        val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
+        val period = Period(60)
+        val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), None, between, period)
+        val Right(cwQueryPlan) = new Planner().plan(cwQuery)
+        cwQueryPlan.steps.size should be(1)
+        val CwRequestStep(_, cwRequests) = cwQueryPlan.steps.head
+        cwRequests.size should be(1)
+        val cwRequest = cwRequests.head
+        cwRequest.getNamespace should be(namespace.value)
+        cwRequest.getStatistics.asScala.contains("Average") should be(true)
+        cwRequest.getStatistics.asScala.contains("Sum") should be(true)
+        cwRequest.getMetricName should be(avgProjection.metric)
+        cwRequest.getPeriod should be(period.value)
+        val formatter = ISODateTimeFormat.dateTimeNoMillis()
+        val startDateTime = formatter.parseDateTime(cwQuery.between.startTime)
+        new DateTime(cwRequest.getStartTime) should be(startDateTime)
+        val endDateTime = formatter.parseDateTime(cwQuery.between.endTime)
+        new DateTime(cwRequest.getEndTime) should be(endDateTime)
       }
     }
   }
