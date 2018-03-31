@@ -1,2 +1,3 @@
 
 . carry over aliases to cw request for the record columns
+. add timestamp sorting as last step of the plan

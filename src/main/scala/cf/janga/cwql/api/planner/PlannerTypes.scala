@@ -2,10 +2,10 @@ package cf.janga.cwql.api.planner
 
 case class ResultSet(records: Seq[Record])
 
-case class Record(values: Map[String, String] = Map.empty[String, String]) {
+case class Record(timestamp: String, data: Map[String, String] = Map.empty[String, String]) {
 
   def +(record: Record): Record = {
-    Record(values ++ record.values)
+    Record(timestamp, data ++ record.data)
   }
 }
 

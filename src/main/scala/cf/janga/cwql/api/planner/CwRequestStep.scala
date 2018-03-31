@@ -26,7 +26,7 @@ case class CwRequestStep(awsCredentialsProvider: AWSCredentialsProvider, request
             getStatistics(datapoint, request).foreach {
               datapointStatistic => {
                 val statisticEntryName = s"${datapointStatistic.statistic}_${request.getMetricName}"
-                val record = Record(Map("timestamp" -> timestamp, statisticEntryName -> datapointStatistic.value.toString))
+                val record = Record(timestamp, Map(statisticEntryName -> datapointStatistic.value.toString))
                 hashJoin + (timestamp, record)
               }
             }

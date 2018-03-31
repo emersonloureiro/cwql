@@ -4,18 +4,18 @@ import scala.collection.mutable.{Map => MMap}
 
 class HashJoin {
 
-  private val resultSetMap = MMap.empty[String, Record]
+  private val recordsMap = MMap.empty[String, Record]
 
-  def +(leadingKey: String, value: Record): Unit = {
-    val resultingValue =
-      resultSetMap.get(leadingKey) match {
-        case None => value
-        case Some(existingValue) => existingValue + value
+  def +(leadingKey: String, record: Record): Unit = {
+    val resultingRecord =
+      recordsMap.get(leadingKey) match {
+        case None => record
+        case Some(existingRecord) => existingRecord + record
       }
-    resultSetMap.put(leadingKey, resultingValue)
+    recordsMap.put(leadingKey, resultingRecord)
   }
 
   def result(): Seq[Record] = {
-    resultSetMap.values.toSeq
+    recordsMap.values.toSeq
   }
 }
