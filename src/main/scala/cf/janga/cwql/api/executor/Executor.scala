@@ -1,21 +1,19 @@
 package cf.janga.cwql.api.executor
 
-import cf.janga.cwql.api.planner.{ResultSet, Step}
-
-import scala.util.{Success, Try}
+import cf.janga.cwql.api.planner.{ExecutionError, ResultSet, Step}
 
 class Executor {
 
-  def execute(steps: Seq[Step]): Try[ResultSet] = {
+  def execute(steps: Seq[Step]): Either[ExecutionError, ResultSet] = {
     executeInternal(None, steps)
   }
 
-  private def executeInternal(previousStepOutput: Option[ResultSet], steps: Seq[Step]): Try[ResultSet] = steps match {
+  private def executeInternal(previousStepOutput: Option[ResultSet], steps: Seq[Step]): Either[ExecutionError, ResultSet] = steps match {
     case nextStep :: remainingSteps => {
-      Try(nextStep.execute(previousStepOutput)).flatMap {
+      nextStep.execute(previousStepOutput).flatMap {
         stepResult => executeInternal(Some(stepResult), remainingSteps)
       }
     }
-    case Nil => Success(previousStepOutput.head)
+    case Nil => Right(previousStepOutput.head)
   }
 }

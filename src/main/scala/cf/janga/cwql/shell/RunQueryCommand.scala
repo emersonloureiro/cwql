@@ -11,7 +11,7 @@ case class RunQuery(parser: Parser, planner: Planner, executor: Executor, query:
       for {
         parsedQuery <- parser.parse(query)
         queryPlan <- planner.plan(parsedQuery)
-        resultSet <- executor.execute(queryPlan.steps).toEither
+        resultSet <- executor.execute(queryPlan.steps)
       } yield resultSet
 
     planning match {
@@ -33,8 +33,13 @@ case class RunQuery(parser: Parser, planner: Planner, executor: Executor, query:
           }
         }
       }
+      case Left(executionError: ExecutionError) => {
+        executionError match {
+          case CloudWatchClientError(message) => console.writeln(s"CloudWatch error: $message")
+        }
+      }
       case Left(exception: Throwable) => {
-        console.writeln("Internal error")
+        console.writeln(s"Internal error: ${exception.getMessage}")
         exception.printStackTrace()
       }
     }

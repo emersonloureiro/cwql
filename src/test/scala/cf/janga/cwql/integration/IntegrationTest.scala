@@ -14,7 +14,7 @@ class IntegrationTest extends WordSpec with Matchers {
       for {
         parsedQuery <- new Parser().parse(query)
         plan <- new Planner().plan(parsedQuery)
-        resultSet <- new Executor().execute(plan.steps).toEither
+        resultSet <- new Executor().execute(plan.steps)
       } yield {
         println(resultSet)
         resultSet

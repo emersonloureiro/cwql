@@ -12,7 +12,7 @@ class OrderByStepTest extends WordSpec with Matchers{
       val record_3 = Record("2018-03-10T12:57:00Z", Map.empty)
       val record_4 = Record("2018-03-10T12:59:00Z", Map.empty)
       val resultSet = ResultSet(Seq(record_2, record_4, record_1, record_3))
-      val sortedResultSet = orderByStep.execute(Some(resultSet))
+      val Right(sortedResultSet) = orderByStep.execute(Some(resultSet))
       sortedResultSet.records should be(Seq(record_1, record_2, record_3, record_4))
     }
 
@@ -23,7 +23,7 @@ class OrderByStepTest extends WordSpec with Matchers{
       val record_3 = Record("2018-03-10T12:57:00Z", Map.empty)
       val record_4 = Record("2018-03-10T12:59:00Z", Map.empty)
       val resultSet = ResultSet(Seq(record_1, record_2, record_3, record_4))
-      val sortedResultSet = orderByStep.execute(Some(resultSet))
+      val Right(sortedResultSet) = orderByStep.execute(Some(resultSet))
       sortedResultSet.records should be(Seq(record_1, record_2, record_3, record_4))
     }
   }

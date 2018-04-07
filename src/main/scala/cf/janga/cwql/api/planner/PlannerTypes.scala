@@ -9,6 +9,9 @@ case class Record(timestamp: String, data: Map[String, String] = Map.empty[Strin
   }
 }
 
+sealed trait ExecutionError
+case class CloudWatchClientError(message: String) extends ExecutionError
+
 trait Step {
-  def execute(inputOption: Option[ResultSet]): ResultSet
+  def execute(inputOption: Option[ResultSet]): Either[ExecutionError, ResultSet]
 }
