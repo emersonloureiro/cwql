@@ -1,13 +1,12 @@
 package cf.janga.cwql.api.planner
 
 import cf.janga.cwql.api.parser._
+import cf.janga.cwql.api.planner.CwQueryConversions._
 import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProviderChain}
 import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsRequest
 import org.joda.time.format.ISODateTimeFormat
-import CwQueryConversions._
 
 import scala.collection.JavaConverters._
-import scala.util.{Success, Try}
 
 case class QueryPlan(steps: Seq[Step])
 
@@ -26,7 +25,7 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
       projectionsPerMetric <- groupProjectionsPerMetric(query.projections, query.namespaces, query.selectionOption, Map.empty)
       cwRequestStep <- planCwRequestStep(projectionsPerMetric, query.between, query.period, Seq.empty)
     } yield {
-      QueryPlan(Seq(cwRequestStep))
+      QueryPlan(Seq(cwRequestStep, OrderByStep(None)))
     }
   }
 
@@ -77,7 +76,7 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
                                         namespaces: Seq[Namespace],
                                         selectionOption: Option[Selection],
                                         groupedProjectionsMap: Map[String, GroupedProjections]): Either[PlannerError, Seq[GroupedProjections]] = projections.headOption match {
-    case Some(projection)=> {
+    case Some(projection) => {
       val matchingNamespace =
         namespaces.collectFirst {
           case Namespace(namespaceName, Some(namespaceAlias)) if projection.alias.isDefined && projection.alias.get == namespaceAlias => {
