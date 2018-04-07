@@ -2,7 +2,7 @@ package cf.janga.cwql.shell
 
 import cf.janga.cwql.api.executor.Executor
 import cf.janga.cwql.api.parser.{Parser, ParserError}
-import cf.janga.cwql.api.planner.{Planner, PlannerError, ResultSet, StartTimeAfterEndTime}
+import cf.janga.cwql.api.planner._
 
 case class RunQuery(parser: Parser, planner: Planner, executor: Executor, query: String, console: Console) extends Command {
 
@@ -27,6 +27,10 @@ case class RunQuery(parser: Parser, planner: Planner, executor: Executor, query:
       case Left(plannerError: PlannerError) => {
         plannerError match {
           case StartTimeAfterEndTime => console.writeln("Start time after end time")
+          case NoMatchingNamespace(projection) => {
+            val projectionName = projection.alias.fold(projection.metric)(alias => s"$alias.${projection.metric}")
+            console.writeln(s"No matching namespace for $projectionName")
+          }
         }
       }
       case Left(exception: Throwable) => {

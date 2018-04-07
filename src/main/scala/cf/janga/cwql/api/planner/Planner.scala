@@ -13,9 +13,7 @@ case class QueryPlan(steps: Seq[Step])
 private case class GroupedProjections(namespace: String, metric: String, projections: Seq[Projection], selectionOption: Option[Selection])
 
 sealed trait PlannerError
-
 case object StartTimeAfterEndTime extends PlannerError
-
 case class NoMatchingNamespace(projection: Projection) extends PlannerError
 
 class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCredentialsProviderChain()) {
