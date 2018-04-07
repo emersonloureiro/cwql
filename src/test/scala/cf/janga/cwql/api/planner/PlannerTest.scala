@@ -117,6 +117,17 @@ class PlannerTest extends WordSpec with Matchers {
       planningError should be(NoMatchingNamespace(avgProjection))
     }
 
+    "fail when namespace alias isn't provided but it's used on projections" in {
+      val avgProjection = Projection(Statistic("avg"), Some("ec2"), "time")
+      val sumProjection = Projection(Statistic("sum"), Some("ec2"), "time")
+      val namespace = Namespace("AWS/EC2", None)
+      val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
+      val period = Period(60)
+      val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), None, between, period)
+      val Left(planningError) = new Planner().plan(cwQuery)
+      planningError should be(NoMatchingNamespace(avgProjection))
+    }
+
     "plan a request with namespace aliases" in {
       val avgProjection = Projection(Statistic("avg"), Some("ec2"), "time")
       val sumProjection = Projection(Statistic("sum"), Some("ec2"), "time")
