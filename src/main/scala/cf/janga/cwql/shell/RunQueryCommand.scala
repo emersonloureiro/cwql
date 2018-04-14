@@ -27,9 +27,13 @@ case class RunQuery(parser: Parser, planner: Planner, executor: Executor, query:
       case Left(plannerError: PlannerError) => {
         plannerError match {
           case StartTimeAfterEndTime => console.writeln("Start time after end time")
-          case NoMatchingNamespace(projection) => {
+          case UnmatchedProjection(projection) => {
             val projectionName = projection.alias.fold(projection.metric)(alias => s"$alias.${projection.metric}")
             console.writeln(s"No matching namespace for $projectionName")
+          }
+          case UnmatchedFilter(booleanExpression) => {
+            val expressionName = booleanExpression.alias.fold(booleanExpression.left)(alias => s"$alias.${booleanExpression.left}")
+            console.writeln(s"""Invalid condition at "$expressionName"""")
           }
         }
       }
@@ -41,6 +45,9 @@ case class RunQuery(parser: Parser, planner: Planner, executor: Executor, query:
       case Left(exception: Throwable) => {
         console.writeln(s"Internal error: ${exception.getMessage}")
         exception.printStackTrace()
+      }
+      case Left(_) => {
+        console.writeln(s"Unknown error, sorry :'(")
       }
     }
   }

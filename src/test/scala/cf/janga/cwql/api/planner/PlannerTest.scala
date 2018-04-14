@@ -104,7 +104,20 @@ class PlannerTest extends WordSpec with Matchers {
         val period = Period(60)
         val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), None, between, period)
         val Left(planningError) = new Planner().plan(cwQuery)
-        planningError should be(NoMatchingNamespace(avgProjection))
+        planningError should be(UnmatchedProjection(avgProjection))
+      }
+
+      "fail when namespace alias isn't used on selection" in {
+        val avgProjection = Projection(Statistic("avg"), Some("ec2"), "time")
+        val sumProjection = Projection(Statistic("sum"), Some("ec2"), "time")
+        val namespace = Namespace("AWS/EC2", Some("ec2"))
+        val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
+        val period = Period(60)
+        val booleanExpression = SimpleBooleanExpression(None, "InstanceId", Equals, StringValue("123456"))
+        val selection = Selection(BooleanExpression(booleanExpression, Seq.empty))
+        val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), Some(selection), between, period)
+        val Left(planningError) = new Planner().plan(cwQuery)
+        planningError should be(UnmatchedFilter(booleanExpression))
       }
 
       "fail when namespace alias isn't provided but it's used on projections" in {
@@ -115,7 +128,7 @@ class PlannerTest extends WordSpec with Matchers {
         val period = Period(60)
         val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), None, between, period)
         val Left(planningError) = new Planner().plan(cwQuery)
-        planningError should be(NoMatchingNamespace(avgProjection))
+        planningError should be(UnmatchedProjection(avgProjection))
       }
 
       "plan a request with namespace aliases" in {
@@ -208,7 +221,7 @@ class PlannerTest extends WordSpec with Matchers {
         val period = Period(60)
         val cwQuery = Query(List(ec2AvgProjection, elbAvgProjection), List(ec2Namespace, elbNamespace), None, between, period)
         val Left(planningError) = new Planner().plan(cwQuery)
-        planningError should be(NoMatchingNamespace(ec2AvgProjection))
+        planningError should be(UnmatchedProjection(ec2AvgProjection))
       }
     }
 

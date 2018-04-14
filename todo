@@ -1,6 +1,4 @@
 
 . carry over aliases to cw request for the record columns
-. Handle too many data points error from CW client
 . handle different namespaces with the same alias
 . keep the projection order on final result set
-. prevent selection with no alias when namespace aliases are provided

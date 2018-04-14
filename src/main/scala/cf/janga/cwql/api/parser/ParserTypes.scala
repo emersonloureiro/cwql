@@ -26,7 +26,9 @@ object ComparisonOperator {
     case "=" => Equals
   }
 }
-case object Equals extends ComparisonOperator
+case object Equals extends ComparisonOperator {
+  override def toString = "="
+}
 
 case class Between(startTime: String, endTime: String)
 
