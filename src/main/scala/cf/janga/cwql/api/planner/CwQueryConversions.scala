@@ -6,7 +6,16 @@ import com.amazonaws.services.cloudwatch.model.Dimension
 object CwQueryConversions {
 
   implicit class BooleanExpressionConversion(simpleBooleanExpression: SimpleBooleanExpression) {
-    def toDimension: Dimension = {
+    def toDimension(namespace: Namespace, projection: Projection): Option[Dimension] = {
+      (namespace.aliasOption, projection.alias, simpleBooleanExpression.alias) match {
+        case (Some(namespaceAlias), Some(projectionAlias), Some(booleanExpressionAlias))
+          if namespaceAlias == projectionAlias && projectionAlias == booleanExpressionAlias => Some(simpleBooleanExpression.toDimension)
+        case ((None, None, None)) => Some(simpleBooleanExpression.toDimension)
+        case _ => None
+      }
+    }
+
+    private def toDimension: Dimension = {
       val dimension = new Dimension()
       dimension.setName(simpleBooleanExpression.left)
       simpleBooleanExpression.right match {

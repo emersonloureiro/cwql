@@ -3,14 +3,14 @@ package cf.janga.cwql.api.planner
 import cf.janga.cwql.api.parser._
 import cf.janga.cwql.api.planner.CwQueryConversions._
 import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProviderChain}
-import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsRequest
+import com.amazonaws.services.cloudwatch.model.{Dimension, GetMetricStatisticsRequest}
 import org.joda.time.format.ISODateTimeFormat
 
 import scala.collection.JavaConverters._
 
 case class QueryPlan(steps: Seq[Step])
 
-private case class GroupedProjections(namespace: String, metric: String, projections: Seq[Projection], selectionOption: Option[Selection])
+private case class GroupedProjections(namespace: Namespace, metric: String, projections: Seq[Projection], selectionOption: Option[Selection])
 
 sealed trait PlannerError
 case object StartTimeAfterEndTime extends PlannerError
@@ -41,33 +41,36 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
         } else {
           request.setStartTime(startTime.toDate)
           request.setEndTime(endTime.toDate)
-          request.setNamespace(groupedProjection.namespace)
+          request.setNamespace(groupedProjection.namespace.value)
           request.setPeriod(period.value)
-          val statistics =
-            groupedProjection.projections.foldLeft(List.empty[String]) {
-              case (foldedStatistics, projection) => {
-                foldedStatistics ++ Seq(projection.statistic.toAwsStatistic)
+          val (statistics, dimensions) =
+            groupedProjection.projections.foldLeft(Seq.empty[String], Seq.empty[Dimension]) {
+              case ((foldedStatistics, foldedDimensions), projection) => {
+                val newStatistics = foldedStatistics ++ Seq(projection.statistic.toAwsStatistic)
+                val dimensions = groupedProjection.selectionOption.fold(Seq.empty[Dimension])(s => getDimensionsFromSelection(groupedProjection.namespace, projection, s))
+                val newDimensions = foldedDimensions ++ dimensions
+                (newStatistics, newDimensions)
               }
             }
           request.setStatistics(statistics.asJava)
-          val dimensions = groupedProjection.selectionOption.toSeq.map {
-            selection => {
-              val requiredDimension = selection.booleanExpression.simpleBooleanExpression.toDimension
-              selection.booleanExpression.nested.foldLeft(Seq(requiredDimension)) {
-                case (foldedDimensions, (booleanOperator, booleanExpression)) => {
-                  booleanOperator match {
-                    case And => foldedDimensions ++ Seq(booleanExpression.toDimension)
-                  }
-                }
-              }
-            }
-          }
-          request.setDimensions(dimensions.flatten.asJava)
+          request.setDimensions(dimensions.asJava)
           planCwRequestStep(groupedProjections.tail, between, period, currentRequests ++ Iterable(request))
         }
       }
       case None => Right(CwRequestStep(awsCredentialsProvider, currentRequests.toSeq))
     }
+  }
+
+  private def getDimensionsFromSelection(namespace: Namespace, projection: Projection, selection: Selection): Seq[Dimension] = {
+    val baseDimensionOption = selection.booleanExpression.simpleBooleanExpression.toDimension(namespace, projection)
+    val dimensions = selection.booleanExpression.nested.foldLeft(Seq(baseDimensionOption)) {
+      case (foldedDimensions, (booleanOperator, booleanExpression)) => {
+        booleanOperator match {
+          case And => foldedDimensions ++ Seq(booleanExpression.toDimension(namespace, projection))
+        }
+      }
+    }
+    dimensions.flatten
   }
 
   private def groupProjectionsPerMetric(projections: Seq[Projection],
@@ -77,11 +80,11 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
     case Some(projection) => {
       val matchingNamespace =
         namespaces.collectFirst {
-          case Namespace(namespaceName, Some(namespaceAlias)) if projection.alias.isDefined && projection.alias.get == namespaceAlias => {
-            (s"$namespaceName-$namespaceAlias-${projection.metric}", namespaceName)
+          case namespace: Namespace if namespace.aliasOption.isDefined && projection.alias.isDefined && projection.alias.get == namespace.aliasOption.get => {
+            (s"${namespace.value}-${namespace.aliasOption.get}-${projection.metric}", namespace)
           }
-          case Namespace(namespaceName, None) if projection.alias.isEmpty && namespaces.size == 1 => {
-            (s"$namespaceName-${projection.metric}", namespaceName)
+          case namespace: Namespace if namespace.aliasOption.isEmpty && projection.alias.isEmpty && namespaces.size == 1 => {
+            (s"${namespace.value}-${projection.metric}", namespace)
           }
         }
       matchingNamespace match {

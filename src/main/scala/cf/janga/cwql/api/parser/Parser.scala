@@ -81,7 +81,7 @@ private class InnerParser(val input: ParserInput) extends ParboiledParser {
   }
 
   def SimpleBooleanExpressionRule = rule {
-    IdentifierRule ~ NonRequiredSpaceRule ~ ComparisonOperatorRule ~ NonRequiredSpaceRule ~ ValueRule ~> SimpleBooleanExpression
+    optional(IdentifierRule ~ ch('.')) ~ IdentifierRule ~ NonRequiredSpaceRule ~ ComparisonOperatorRule ~ NonRequiredSpaceRule ~ ValueRule ~> ((alias, identifier, comparison, value) => SimpleBooleanExpression(alias.asInstanceOf[Option[String]], identifier, comparison, value))
   }
 
   def ValueRule = rule {

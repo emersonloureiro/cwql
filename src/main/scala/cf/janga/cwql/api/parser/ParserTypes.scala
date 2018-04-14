@@ -11,14 +11,14 @@ case class Selection(booleanExpression: BooleanExpression)
 case class BooleanExpression(simpleBooleanExpression: SimpleBooleanExpression, nested: Seq[(BooleanOperator, SimpleBooleanExpression)])
 
 object BooleanOperator {
-  def apply(operator: String): BooleanOperator = operator match {
+  def apply(operator: String): BooleanOperator = operator.toLowerCase match {
     case "and" => And
   }
 }
 sealed trait BooleanOperator
 case object And extends BooleanOperator
 
-case class SimpleBooleanExpression(left: String, comparisonOperator: ComparisonOperator, right: Value)
+case class SimpleBooleanExpression(alias: Option[String], left: String, comparisonOperator: ComparisonOperator, right: Value)
 
 sealed trait ComparisonOperator
 object ComparisonOperator {

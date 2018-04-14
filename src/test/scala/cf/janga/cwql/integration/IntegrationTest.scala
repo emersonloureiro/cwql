@@ -47,7 +47,7 @@ class IntegrationTest extends WordSpec with Matchers {
             | max(ec2.CPUUtilization),
             | avg(ec2.CPUUtilization)
             |FROM AWS/EC2 AS ec2
-            |WHERE InstanceId='i-00c753b8c2e2273a9'
+            |WHERE ec2.InstanceId='i-00c753b8c2e2273a9'
             |BETWEEN 2018-03-10T00:00:00Z
             | AND 2018-03-10T14:00:00Z
             |PERIOD 3600

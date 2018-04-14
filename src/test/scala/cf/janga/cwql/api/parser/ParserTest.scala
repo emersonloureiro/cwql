@@ -64,7 +64,7 @@ class ParserTest extends WordSpec with Matchers {
         val queryString = "select avg(size), avg(time) from requests where status='200' between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
         val Right(query) = new Parser().parse(queryString)
         val Some(selection) = query.selectionOption
-        selection.booleanExpression.simpleBooleanExpression should be(SimpleBooleanExpression("status", Equals, StringValue("200")))
+        selection.booleanExpression.simpleBooleanExpression should be(SimpleBooleanExpression(None, "status", Equals, StringValue("200")))
         selection.booleanExpression.nested should be(Seq())
         query.between.startTime should be("2018-01-01T00:00:00Z")
         query.between.endTime should be("2018-01-31T:23:59:59Z")
@@ -75,11 +75,22 @@ class ParserTest extends WordSpec with Matchers {
         val queryString = "select max(size), sum(time) from requests where status='200' and size = 10 and time = 5 between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
         val Right(query) = new Parser().parse(queryString)
         val Some(selection) = query.selectionOption
-        selection.booleanExpression.simpleBooleanExpression should be(SimpleBooleanExpression("status", Equals, StringValue("200")))
+        selection.booleanExpression.simpleBooleanExpression should be(SimpleBooleanExpression(None, "status", Equals, StringValue("200")))
         selection.booleanExpression.nested should be(Seq(
-          (And, SimpleBooleanExpression("size", Equals, IntegerValue(10))),
-          (And, SimpleBooleanExpression("time", Equals, IntegerValue(5)))
+          (And, SimpleBooleanExpression(None, "size", Equals, IntegerValue(10))),
+          (And, SimpleBooleanExpression(None, "time", Equals, IntegerValue(5)))
         ))
+        query.between.startTime should be("2018-01-01T00:00:00Z")
+        query.between.endTime should be("2018-01-31T:23:59:59Z")
+        query.period should be(Period(10))
+      }
+
+      "parse boolean expressions with aliases" in {
+        val queryString = "select avg(r.size), avg(r.time) from requests as r where r.status='200' between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
+        val Right(query) = new Parser().parse(queryString)
+        val Some(selection) = query.selectionOption
+        selection.booleanExpression.simpleBooleanExpression should be(SimpleBooleanExpression(Some("r"), "status", Equals, StringValue("200")))
+        selection.booleanExpression.nested should be(Seq())
         query.between.startTime should be("2018-01-01T00:00:00Z")
         query.between.endTime should be("2018-01-31T:23:59:59Z")
         query.period should be(Period(10))
