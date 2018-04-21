@@ -59,7 +59,7 @@ case class RunQuery(parser: Parser, planner: Planner, executor: Executor, query:
       val data =
         resultSet.records.map {
           record => {
-            List(record.timestamp) ++ record.data.values.toSeq
+            List(record.timestamp) ++ record.data.values.toSeq.sortWith((entry_1, entry_2) => entry_1._2 < entry_2._2).map(_._1)
           }
         }
       console.writeln(format(headers ++ data))

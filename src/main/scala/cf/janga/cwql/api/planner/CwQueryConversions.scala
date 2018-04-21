@@ -28,10 +28,10 @@ object CwQueryConversions {
 
   implicit class StatisticConversions(statistic: Statistic) {
     def toAwsStatistic: String = statistic match {
-      case Average => "Average"
-      case Sum => "Sum"
-      case Maximum => "Maximum"
-      case Minimum => "Minimum"
+      case Average => Constants.Average
+      case Sum => Constants.Sum
+      case Maximum => Constants.Maximum
+      case Minimum => Constants.Minimum
     }
   }
 

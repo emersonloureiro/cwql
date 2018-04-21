@@ -21,7 +21,7 @@ class PlannerTest extends WordSpec with Matchers {
         cwQueryPlan.steps.size should be(2)
         val CwRequestStep(_, cwRequests) = cwQueryPlan.steps.head
         cwRequests.size should be(1)
-        val cwRequest = cwRequests.head
+        val cwRequest = cwRequests.head.cloudWatchRequest
         cwRequest.getNamespace should be(namespace.value)
         cwRequest.getStatistics.asScala should be(List("Average"))
         cwRequest.getMetricName should be(projection.metric)
@@ -46,7 +46,7 @@ class PlannerTest extends WordSpec with Matchers {
         cwQueryPlan.steps.size should be(2)
         val CwRequestStep(_, cwRequests) = cwQueryPlan.steps.head
         cwRequests.size should be(1)
-        val cwRequest = cwRequests.head
+        val cwRequest = cwRequests.head.cloudWatchRequest
         cwRequest.getNamespace should be(namespace.value)
         cwRequest.getStatistics.asScala.contains("Average") should be(true)
         cwRequest.getStatistics.asScala.contains("Sum") should be(true)
@@ -72,7 +72,7 @@ class PlannerTest extends WordSpec with Matchers {
         cwQueryPlan.steps.size should be(2)
         val CwRequestStep(_, cwRequests) = cwQueryPlan.steps.head
         cwRequests.size should be(2)
-        val avgCwRequest = cwRequests.head
+        val avgCwRequest = cwRequests.head.cloudWatchRequest
         avgCwRequest.getNamespace should be(namespace.value)
         avgCwRequest.getStatistics.asScala should be(List("Average"))
         avgCwRequest.getMetricName should be(avgProjection.metric)
@@ -83,7 +83,7 @@ class PlannerTest extends WordSpec with Matchers {
         val avgRequestEndDateTime = formatter.parseDateTime(cwQuery.between.endTime)
         new DateTime(avgCwRequest.getEndTime) should be(avgRequestEndDateTime)
 
-        val sumCwRequest = cwRequests(1)
+        val sumCwRequest = cwRequests(1).cloudWatchRequest
         sumCwRequest.getNamespace should be(namespace.value)
         sumCwRequest.getStatistics.asScala should be(List("Sum"))
         sumCwRequest.getMetricName should be(sumProjection.metric)
@@ -142,7 +142,7 @@ class PlannerTest extends WordSpec with Matchers {
         cwQueryPlan.steps.size should be(2)
         val CwRequestStep(_, cwRequests) = cwQueryPlan.steps.head
         cwRequests.size should be(1)
-        val cwRequest = cwRequests.head
+        val cwRequest = cwRequests.head.cloudWatchRequest
         cwRequest.getNamespace should be(namespace.value)
         cwRequest.getStatistics.asScala.contains("Average") should be(true)
         cwRequest.getStatistics.asScala.contains("Sum") should be(true)
@@ -179,7 +179,7 @@ class PlannerTest extends WordSpec with Matchers {
         cwRequests.size should be(2)
 
         // avg ec2 metric
-        val ec2AvgCwRequest = cwRequests.head
+        val ec2AvgCwRequest = cwRequests.head.cloudWatchRequest
         ec2AvgCwRequest.getNamespace should be(ec2Namespace.value)
         ec2AvgCwRequest.getStatistics.asScala should be(List("Average"))
         ec2AvgCwRequest.getMetricName should be(ec2AvgProjection.metric)
@@ -195,7 +195,7 @@ class PlannerTest extends WordSpec with Matchers {
         new DateTime(ec2AvgCwRequest.getEndTime) should be(ec2AvgRequestEndDateTime)
 
         // avg elb metric
-        val elbAvgCwRequest = cwRequests(1)
+        val elbAvgCwRequest = cwRequests(1).cloudWatchRequest
         elbAvgCwRequest.getNamespace should be(elbNamespace.value)
         elbAvgCwRequest.getStatistics.asScala should be(List("Average"))
         elbAvgCwRequest.getMetricName should be(elbAvgProjection.metric)

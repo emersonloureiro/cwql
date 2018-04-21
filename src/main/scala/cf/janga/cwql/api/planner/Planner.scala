@@ -10,7 +10,8 @@ import scala.collection.JavaConverters._
 
 case class QueryPlan(steps: Seq[Step])
 
-private case class GroupedProjections(namespace: Namespace, metric: String, projections: Seq[Projection])
+private case class UnorderedProjection(originalProjection: Projection, order: Int)
+private case class GroupedProjections(namespace: Namespace, metric: String, projections: Seq[UnorderedProjection])
 
 sealed trait PlannerError
 case object StartTimeAfterEndTime extends PlannerError
@@ -21,7 +22,7 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
 
   def plan(query: Query): Either[PlannerError, QueryPlan] = {
     for {
-      projectionsPerMetric <- groupProjectionsPerMetric(query.projections, query.namespaces, Map.empty)
+      projectionsPerMetric <- groupProjectionsPerMetric(query.projections, query.namespaces, Map.empty, 0)
       cwRequestStep <- planCwRequestStep(projectionsPerMetric, query.selectionOption, query.between, query.period, Seq.empty)
     } yield {
       QueryPlan(Seq(cwRequestStep, OrderByStep(None)))
@@ -30,7 +31,7 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
 
   private def planCwRequestStep(groupedProjections: Seq[GroupedProjections], selectionOption: Option[Selection],
                                 between: Between, period: Period,
-                                currentRequests: Iterable[GetMetricStatisticsRequest]): Either[PlannerError, CwRequestStep] = {
+                                currentRequests: Iterable[ProjectionsGetMetricStatisticsRequest]): Either[PlannerError, CwRequestStep] = {
     groupedProjections.headOption match {
       case Some(groupedProjection) => {
         val formatter = ISODateTimeFormat.dateTimeNoMillis()
@@ -39,17 +40,17 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
         if (startTime.isAfter(endTime)) {
           Left(StartTimeAfterEndTime)
         } else {
-          val request = new GetMetricStatisticsRequest()
-          request.setMetricName(groupedProjection.metric)
-          request.setStartTime(startTime.toDate)
-          request.setEndTime(endTime.toDate)
-          request.setNamespace(groupedProjection.namespace.value)
-          request.setPeriod(period.value)
+          val cloudWatchRequest = new GetMetricStatisticsRequest()
+          cloudWatchRequest.setMetricName(groupedProjection.metric)
+          cloudWatchRequest.setStartTime(startTime.toDate)
+          cloudWatchRequest.setEndTime(endTime.toDate)
+          cloudWatchRequest.setNamespace(groupedProjection.namespace.value)
+          cloudWatchRequest.setPeriod(period.value)
           getStatisticsAndDimensions(groupedProjection.namespace, groupedProjection.projections, selectionOption, Seq.empty, Seq.empty).flatMap {
-            case (statistics, dimensions, newSelectionOption) => {
-              request.setStatistics(statistics.asJava)
-              request.setDimensions(dimensions.asJava)
-              planCwRequestStep(groupedProjections.tail, newSelectionOption, between, period, currentRequests ++ Iterable(request))
+            case (projectionStatistics, dimensions, newSelectionOption) => {
+              cloudWatchRequest.setStatistics(projectionStatistics.map(_.statistic).asJava)
+              cloudWatchRequest.setDimensions(dimensions.asJava)
+              planCwRequestStep(groupedProjections.tail, newSelectionOption, between, period, currentRequests ++ Iterable(ProjectionsGetMetricStatisticsRequest(cloudWatchRequest, projectionStatistics)))
             }
           }
         }
@@ -62,21 +63,21 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
     }
   }
 
-  def getStatisticsAndDimensions(namespace: Namespace, projections: Seq[Projection], selectionOption: Option[Selection],
-                                 statistics: Seq[String], dimensions: Seq[Dimension]): Either[PlannerError, (Seq[String], Seq[Dimension], Option[Selection])] = projections match {
-    case projection :: remainder => {
-      val newStatistics = statistics ++ Seq(projection.statistic.toAwsStatistic)
+  def getStatisticsAndDimensions(namespace: Namespace, unorderedProjections: Seq[UnorderedProjection], selectionOption: Option[Selection],
+                                 projectionStatistics: Seq[ProjectionStatistic], dimensions: Seq[Dimension]): Either[PlannerError, (Seq[ProjectionStatistic], Seq[Dimension], Option[Selection])] = unorderedProjections match {
+    case unorderedProjection :: remainder => {
+      val newProjectionStatistics = projectionStatistics ++ Seq(ProjectionStatistic(unorderedProjection.originalProjection.statistic.toAwsStatistic, unorderedProjection.order))
       selectionOption match {
         case Some(selection) => {
-          val (newSelectionOption, newDimensions) = getDimensionsFromSelection(namespace, projection, selection)
-          getStatisticsAndDimensions(namespace, remainder, newSelectionOption, newStatistics, dimensions ++ newDimensions)
+          val (newSelectionOption, newDimensions) = getDimensionsFromSelection(namespace, unorderedProjection.originalProjection, selection)
+          getStatisticsAndDimensions(namespace, remainder, newSelectionOption, newProjectionStatistics, dimensions ++ newDimensions)
         }
         case None => {
-          getStatisticsAndDimensions(namespace, remainder, selectionOption, newStatistics, dimensions)
+          getStatisticsAndDimensions(namespace, remainder, selectionOption, newProjectionStatistics, dimensions)
         }
       }
     }
-    case Nil => Right((statistics, dimensions, selectionOption))
+    case Nil => Right((projectionStatistics, dimensions, selectionOption))
   }
 
   private def getDimensionsFromSelection(namespace: Namespace, projection: Projection, selection: Selection): (Option[Selection], Seq[Dimension]) = {
@@ -108,7 +109,8 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
 
   private def groupProjectionsPerMetric(projections: Seq[Projection],
                                         namespaces: Seq[Namespace],
-                                        groupedProjectionsMap: Map[String, GroupedProjections]): Either[PlannerError, Seq[GroupedProjections]] = projections.headOption match {
+                                        groupedProjectionsMap: Map[String, GroupedProjections],
+                                        order: Int): Either[PlannerError, Seq[GroupedProjections]] = projections.headOption match {
     case Some(projection) => {
       val matchingNamespace =
         namespaces.collectFirst {
@@ -123,13 +125,15 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
         case Some((key, namespace)) => {
           groupedProjectionsMap.get(key) match {
             case None => {
-              val newMap = groupedProjectionsMap + (key -> GroupedProjections(namespace, projection.metric, Seq(projection)))
-              groupProjectionsPerMetric(projections.tail, namespaces, newMap)
+              val unorderedProjection = UnorderedProjection(projection, order)
+              val newMap = groupedProjectionsMap + (key -> GroupedProjections(namespace, projection.metric, Seq(unorderedProjection)))
+              groupProjectionsPerMetric(projections.tail, namespaces, newMap, order + 1)
             }
             case Some(existingGroupedProjections) => {
-              val newProjections = existingGroupedProjections.projections ++ Seq(projection)
+              val unorderedProjection = UnorderedProjection(projection, order)
+              val newProjections = existingGroupedProjections.projections ++ Seq(unorderedProjection)
               val newMap = groupedProjectionsMap + (key -> GroupedProjections(namespace, projection.metric, newProjections))
-              groupProjectionsPerMetric(projections.tail, namespaces, newMap)
+              groupProjectionsPerMetric(projections.tail, namespaces, newMap, order + 1)
             }
           }
         }

@@ -10,9 +10,11 @@ import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
-case class DatapointStatistic(statistic: String, value: Double)
+private case class DatapointStatistic(cloudWatchStatistic: String, projectionStatistic: String, value: Double, order: Int)
+case class ProjectionsGetMetricStatisticsRequest(cloudWatchRequest: GetMetricStatisticsRequest, projectionStatistics: Seq[ProjectionStatistic])
+case class ProjectionStatistic(statistic: String, projectionOrder: Int)
 
-case class CwRequestStep(awsCredentialsProvider: AWSCredentialsProvider, requests: Seq[GetMetricStatisticsRequest]) extends Step {
+case class CwRequestStep(awsCredentialsProvider: AWSCredentialsProvider, requests: Seq[ProjectionsGetMetricStatisticsRequest]) extends Step {
 
   private val cwClient = AmazonCloudWatchClientBuilder.standard().withCredentials(awsCredentialsProvider).build()
 
@@ -21,18 +23,19 @@ case class CwRequestStep(awsCredentialsProvider: AWSCredentialsProvider, request
   }
 
   @tailrec
-  private def doExecute(requests: Seq[GetMetricStatisticsRequest], hashJoin: HashJoin): Either[ExecutionError, ResultSet] = requests match {
+  private def doExecute(requests: Seq[ProjectionsGetMetricStatisticsRequest], hashJoin: HashJoin): Either[ExecutionError, ResultSet] = requests match {
     case request :: remaining => {
-      callCloudWatch(request) match {
+      val cloudWatchRequest = request.cloudWatchRequest
+      callCloudWatch(cloudWatchRequest) match {
         case Right(result) => {
           val datapoints = result.getDatapoints
           datapoints.asScala.foreach {
             datapoint => {
               val timestamp = new DateTime(datapoint.getTimestamp).toString(ISODateTimeFormat.dateTimeNoMillis())
-              getStatistics(datapoint, request).foreach {
+              getStatistics(datapoint, request.projectionStatistics).foreach {
                 datapointStatistic => {
-                  val statisticEntryName = s"${datapointStatistic.statistic}_${request.getMetricName}"
-                  val record = Record(timestamp, Map(statisticEntryName -> datapointStatistic.value.toString))
+                  val statisticEntryName = s"${datapointStatistic.projectionStatistic}_${cloudWatchRequest.getMetricName}"
+                  val record = Record(timestamp, Map(statisticEntryName -> (datapointStatistic.value.toString, datapointStatistic.order)))
                   hashJoin + (timestamp, record)
                 }
               }
@@ -53,11 +56,19 @@ case class CwRequestStep(awsCredentialsProvider: AWSCredentialsProvider, request
     }
   }
 
-  private def getStatistics(datapoint: Datapoint, request: GetMetricStatisticsRequest): (Seq[DatapointStatistic]) = {
-    val averageOption = Option(datapoint.getAverage).map(DatapointStatistic("avg", _))
-    val minOption = Option(datapoint.getMinimum).map(DatapointStatistic("min", _))
-    val maxOption = Option(datapoint.getMaximum).map(DatapointStatistic("max", _))
-    val sumOption = Option(datapoint.getSum).map(DatapointStatistic("sum", _))
-    Seq(averageOption, minOption, maxOption, sumOption).flatten
+  private def getStatistics(datapoint: Datapoint, projectionStatistics: Seq[ProjectionStatistic]): (Seq[DatapointStatistic]) = {
+    val averageOption = Option(datapoint.getAverage).map((Constants.Average, "avg", _))
+    val minOption = Option(datapoint.getMinimum).map((Constants.Minimum, "min", _))
+    val maxOption = Option(datapoint.getMaximum).map((Constants.Maximum, "max", _))
+    val sumOption = Option(datapoint.getSum).map((Constants.Sum, "sum", _))
+    val collectedStatistics = Seq(averageOption, minOption, maxOption, sumOption).flatten
+
+    for {
+      collectedStatistic <- collectedStatistics
+      projectionStatistic <- projectionStatistics
+      if collectedStatistic._1 == projectionStatistic.statistic
+    } yield {
+      DatapointStatistic(projectionStatistic.statistic, collectedStatistic._2, collectedStatistic._3, projectionStatistic.projectionOrder)
+    }
   }
 }

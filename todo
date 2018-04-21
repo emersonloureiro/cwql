@@ -1,4 +1,3 @@
 
 . carry over aliases to cw request for the record columns
 . handle different namespaces with the same alias
-. keep the projection order on final result set
