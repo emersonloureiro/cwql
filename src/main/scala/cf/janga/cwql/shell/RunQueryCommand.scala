@@ -55,7 +55,7 @@ case class RunQuery(parser: Parser, planner: Planner, executor: Executor, query:
   private def printResultSet(resultSet: ResultSet): Unit = resultSet.records match {
     case Nil => console.writeln("0 records returned")
     case _ => {
-      val headers = List(List("Timestamp") ++ resultSet.records.head.data.keys.toSeq)
+      val headers = List(List("Timestamp") ++ resultSet.records.head.data.map(entry => (entry._1, entry._2._2)).toSeq.sortWith((entry_1, entry_2) => entry_1._2 < entry_2._2).map(_._1))
       val data =
         resultSet.records.map {
           record => {
