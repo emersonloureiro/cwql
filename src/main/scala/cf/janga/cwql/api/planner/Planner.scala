@@ -10,7 +10,7 @@ import scala.collection.JavaConverters._
 
 case class QueryPlan(steps: Seq[Step])
 
-private case class UnorderedProjection(originalProjection: Projection, order: Int)
+case class UnorderedProjection(originalProjection: Projection, order: Int)
 private case class GroupedProjections(namespace: Namespace, metric: String, projections: Seq[UnorderedProjection])
 
 sealed trait PlannerError
@@ -31,7 +31,7 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
 
   private def planCwRequestStep(groupedProjections: Seq[GroupedProjections], selectionOption: Option[Selection],
                                 between: Between, period: Period,
-                                currentRequests: Iterable[ProjectionsGetMetricStatisticsRequest]): Either[PlannerError, CwRequestStep] = {
+                                currentRequests: Iterable[GetMetricStatisticsRequestForProjections]): Either[PlannerError, CwRequestStep] = {
     groupedProjections.headOption match {
       case Some(groupedProjection) => {
         val formatter = ISODateTimeFormat.dateTimeNoMillis()
@@ -48,9 +48,9 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
           cloudWatchRequest.setPeriod(period.value)
           getStatisticsAndDimensions(groupedProjection.namespace, groupedProjection.projections, selectionOption, Seq.empty, Seq.empty).flatMap {
             case (projectionStatistics, dimensions, newSelectionOption) => {
-              cloudWatchRequest.setStatistics(projectionStatistics.map(_.statistic).asJava)
+              cloudWatchRequest.setStatistics(projectionStatistics.map(_.originalProjection.statistic.toAwsStatistic).asJava)
               cloudWatchRequest.setDimensions(dimensions.asJava)
-              planCwRequestStep(groupedProjections.tail, newSelectionOption, between, period, currentRequests ++ Iterable(ProjectionsGetMetricStatisticsRequest(cloudWatchRequest, projectionStatistics)))
+              planCwRequestStep(groupedProjections.tail, newSelectionOption, between, period, currentRequests ++ Iterable(GetMetricStatisticsRequestForProjections(cloudWatchRequest, projectionStatistics)))
             }
           }
         }
@@ -64,9 +64,9 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
   }
 
   def getStatisticsAndDimensions(namespace: Namespace, unorderedProjections: Seq[UnorderedProjection], selectionOption: Option[Selection],
-                                 projectionStatistics: Seq[ProjectionStatistic], dimensions: Seq[Dimension]): Either[PlannerError, (Seq[ProjectionStatistic], Seq[Dimension], Option[Selection])] = unorderedProjections match {
+                                 projectionStatistics: Seq[UnorderedProjection], dimensions: Seq[Dimension]): Either[PlannerError, (Seq[UnorderedProjection], Seq[Dimension], Option[Selection])] = unorderedProjections match {
     case unorderedProjection :: remainder => {
-      val newProjectionStatistics = projectionStatistics ++ Seq(ProjectionStatistic(unorderedProjection.originalProjection.statistic.toAwsStatistic, unorderedProjection.order))
+      val newProjectionStatistics = projectionStatistics ++ Seq(unorderedProjection)
       selectionOption match {
         case Some(selection) => {
           val (newSelectionOption, newDimensions) = getDimensionsFromSelection(namespace, unorderedProjection.originalProjection, selection)
@@ -114,10 +114,10 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
     case Some(projection) => {
       val matchingNamespace =
         namespaces.collectFirst {
-          case namespace: Namespace if namespace.aliasOption.isDefined && projection.alias.isDefined && projection.alias.get == namespace.aliasOption.get => {
+          case namespace: Namespace if namespace.aliasOption.isDefined && projection.namespaceAlias.isDefined && projection.namespaceAlias.get == namespace.aliasOption.get => {
             (s"${namespace.value}-${namespace.aliasOption.get}-${projection.metric}", namespace)
           }
-          case namespace: Namespace if namespace.aliasOption.isEmpty && projection.alias.isEmpty && namespaces.size == 1 => {
+          case namespace: Namespace if namespace.aliasOption.isEmpty && projection.namespaceAlias.isEmpty && namespaces.size == 1 => {
             (s"${namespace.value}-${projection.metric}", namespace)
           }
         }

@@ -11,7 +11,7 @@ class ParserTest extends WordSpec with Matchers {
       "parse a single projection" in {
         val queryString = "select avg(time) from requests between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
         val Right(query) = new Parser().parse(queryString)
-        query.projections should be(Seq(Projection(Statistic("avg"), None, "time")))
+        query.projections should be(Seq(Projection(Statistic("avg"), None, None, "time")))
         query.namespaces should be(Seq(Namespace("requests", None)))
         query.between.startTime should be("2018-01-01T00:00:00Z")
         query.between.endTime should be("2018-01-31T:23:59:59Z")
@@ -21,7 +21,17 @@ class ParserTest extends WordSpec with Matchers {
       "parse multiple projections" in {
         val queryString = "select avg(size), avg(time) from requests between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
         val Right(query) = new Parser().parse(queryString)
-        query.projections should be(Seq(Projection(Statistic("avg"), None, "size"), Projection(Statistic("avg"), None, "time")))
+        query.projections should be(Seq(Projection(Statistic("avg"), None, None, "size"), Projection(Statistic("avg"), None, None, "time")))
+        query.namespaces should be(Seq(Namespace("requests", None)))
+        query.between.startTime should be("2018-01-01T00:00:00Z")
+        query.between.endTime should be("2018-01-31T:23:59:59Z")
+        query.period should be(Period(10))
+      }
+
+      "parse projections with namespace aliases" in {
+        val queryString = "select max(alias1.size), min(alias2.time) from requests between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
+        val Right(query) = new Parser().parse(queryString)
+        query.projections should be(Seq(Projection(Statistic("max"), Some("alias1"), None, "size"), Projection(Statistic("min"), Some("alias2"), None, "time")))
         query.namespaces should be(Seq(Namespace("requests", None)))
         query.between.startTime should be("2018-01-01T00:00:00Z")
         query.between.endTime should be("2018-01-31T:23:59:59Z")
@@ -29,9 +39,9 @@ class ParserTest extends WordSpec with Matchers {
       }
 
       "parse projections with aliases" in {
-        val queryString = "select max(alias1.size), min(alias2.time) from requests between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
+        val queryString = "select max(size) as size, min(time) as time from requests between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
         val Right(query) = new Parser().parse(queryString)
-        query.projections should be(Seq(Projection(Statistic("max"), Some("alias1"), "size"), Projection(Statistic("min"), Some("alias2"), "time")))
+        query.projections should be(Seq(Projection(Statistic("max"), None, Some("size"), "size"), Projection(Statistic("min"), None, Some("time"), "time")))
         query.namespaces should be(Seq(Namespace("requests", None)))
         query.between.startTime should be("2018-01-01T00:00:00Z")
         query.between.endTime should be("2018-01-31T:23:59:59Z")
@@ -41,7 +51,7 @@ class ParserTest extends WordSpec with Matchers {
       "parse CW namespace" in {
         val queryString = "select sum(alias1.size), sum(alias2.time) from AWS/EC2 between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
         val Right(query) = new Parser().parse(queryString)
-        query.projections should be(Seq(Projection(Statistic("sum"), Some("alias1"), "size"), Projection(Statistic("sum"), Some("alias2"), "time")))
+        query.projections should be(Seq(Projection(Statistic("sum"), Some("alias1"), None, "size"), Projection(Statistic("sum"), Some("alias2"), None, "time")))
         query.namespaces should be(Seq(Namespace("AWS/EC2", None)))
         query.between.startTime should be("2018-01-01T00:00:00Z")
         query.between.endTime should be("2018-01-31T:23:59:59Z")
@@ -51,7 +61,7 @@ class ParserTest extends WordSpec with Matchers {
       "parse CW namespace with alias" in {
         val queryString = "select sum(ec2.size), sum(ec2.time) from AWS/EC2 as ec2 between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
         val Right(query) = new Parser().parse(queryString)
-        query.projections should be(Seq(Projection(Statistic("sum"), Some("ec2"), "size"), Projection(Statistic("sum"), Some("ec2"), "time")))
+        query.projections should be(Seq(Projection(Statistic("sum"), Some("ec2"), None, "size"), Projection(Statistic("sum"), Some("ec2"), None, "time")))
         query.namespaces should be(Seq(Namespace("AWS/EC2", Some("ec2"))))
         query.between.startTime should be("2018-01-01T00:00:00Z")
         query.between.endTime should be("2018-01-31T:23:59:59Z")

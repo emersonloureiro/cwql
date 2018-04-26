@@ -2,7 +2,7 @@ package cf.janga.cwql.api.parser
 
 case class Query(projections: Seq[Projection], namespaces: Seq[Namespace], selectionOption: Option[Selection], between: Between, period: Period)
 
-case class Projection(statistic: Statistic, alias: Option[String], metric: String)
+case class Projection(statistic: Statistic, namespaceAlias: Option[String], alias: Option[String], metric: String)
 
 case class Namespace(value: String, aliasOption: Option[String])
 
@@ -46,8 +46,18 @@ object Statistic {
     case "min" => Minimum
   }
 }
-sealed trait Statistic
-case object Average extends Statistic
-case object Sum extends Statistic
-case object Minimum extends Statistic
-case object Maximum extends Statistic
+sealed trait Statistic {
+  def value: String
+}
+case object Average extends Statistic {
+  override def value: String = "avg"
+}
+case object Sum extends Statistic {
+  override def value: String = "sum"
+}
+case object Minimum extends Statistic {
+  override def value: String = "min"
+}
+case object Maximum extends Statistic {
+  override def value: String = "max"
+}

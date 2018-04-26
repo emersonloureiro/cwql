@@ -28,7 +28,7 @@ case class RunQuery(parser: Parser, planner: Planner, executor: Executor, query:
         plannerError match {
           case StartTimeAfterEndTime => console.writeln("Start time after end time")
           case UnmatchedProjection(projection) => {
-            val projectionName = projection.alias.fold(projection.metric)(alias => s"$alias.${projection.metric}")
+            val projectionName = projection.namespaceAlias.fold(projection.metric)(alias => s"$alias.${projection.metric}")
             console.writeln(s"No matching namespace for $projectionName")
           }
           case UnmatchedFilter(booleanExpression) => {

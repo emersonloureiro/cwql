@@ -51,7 +51,7 @@ private class InnerParser(val input: ParserInput) extends ParboiledParser {
   }
 
   def ProjectionStatisticRule = rule {
-    StatisticsRule ~ ch('(') ~ optional(IdentifierRule ~ ch('.')) ~ IdentifierRule ~ ch(')') ~> ((statistic, alias, id) => Projection(statistic.asInstanceOf[Statistic], alias.asInstanceOf[Option[String]], id.asInstanceOf[String]))
+    StatisticsRule ~ ch('(') ~ optional(IdentifierRule ~ ch('.')) ~ IdentifierRule ~ ch(')') ~ (optional(RequiredSpaceRule ~ ignoreCase("as") ~ RequiredSpaceRule ~ IdentifierRule) ~> ((alias) => alias.asInstanceOf[Option[String]])) ~> ((statistic, namespaceAlias, metric, alias) => Projection(statistic, namespaceAlias.asInstanceOf[Option[String]], alias.asInstanceOf[Option[String]], metric))
   }
 
   def StatisticsRule = rule {

@@ -7,7 +7,7 @@ object CwQueryConversions {
 
   implicit class BooleanExpressionConversion(simpleBooleanExpression: SimpleBooleanExpression) {
     def toDimension(namespace: Namespace, projection: Projection): Option[Dimension] = {
-      (namespace.aliasOption, projection.alias, simpleBooleanExpression.alias) match {
+      (namespace.aliasOption, projection.namespaceAlias, simpleBooleanExpression.alias) match {
         case (Some(namespaceAlias), Some(projectionAlias), Some(booleanExpressionAlias))
           if namespaceAlias == projectionAlias && projectionAlias == booleanExpressionAlias => Some(simpleBooleanExpression.toDimension)
         case ((None, None, None)) => Some(simpleBooleanExpression.toDimension)

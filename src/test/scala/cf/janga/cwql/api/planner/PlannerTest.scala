@@ -12,7 +12,7 @@ class PlannerTest extends WordSpec with Matchers {
   "cqwl planner" when {
     "given a single namespace" should {
       "plan a single request for a single statistic of a single metric" in {
-        val projection = Projection(Statistic("avg"), None, "time")
+        val projection = Projection(Statistic("avg"), None, None, "time")
         val namespace = Namespace("AWS/EC2", None)
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
@@ -36,8 +36,8 @@ class PlannerTest extends WordSpec with Matchers {
       }
 
       "plan a single request for multiple statistics of a single metric" in {
-        val avgProjection = Projection(Statistic("avg"), None, "time")
-        val sumProjection = Projection(Statistic("sum"), None, "time")
+        val avgProjection = Projection(Statistic("avg"), None, None, "time")
+        val sumProjection = Projection(Statistic("sum"), None, None, "time")
         val namespace = Namespace("AWS/EC2", None)
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
@@ -62,8 +62,8 @@ class PlannerTest extends WordSpec with Matchers {
       }
 
       "plan multiple requests for multiple metrics" in {
-        val avgProjection = Projection(Statistic("avg"), None, "time")
-        val sumProjection = Projection(Statistic("sum"), None, "request_size")
+        val avgProjection = Projection(Statistic("avg"), None, None, "time")
+        val sumProjection = Projection(Statistic("sum"), None, None, "request_size")
         val namespace = Namespace("AWS/EC2", None)
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
@@ -97,8 +97,8 @@ class PlannerTest extends WordSpec with Matchers {
       }
 
       "fail when namespace alias isn't used on projections" in {
-        val avgProjection = Projection(Statistic("avg"), None, "time")
-        val sumProjection = Projection(Statistic("sum"), None, "time")
+        val avgProjection = Projection(Statistic("avg"), None, None, "time")
+        val sumProjection = Projection(Statistic("sum"), None, None, "time")
         val namespace = Namespace("AWS/EC2", Some("ec2"))
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
@@ -108,8 +108,8 @@ class PlannerTest extends WordSpec with Matchers {
       }
 
       "fail when namespace alias isn't used on selection" in {
-        val avgProjection = Projection(Statistic("avg"), Some("ec2"), "time")
-        val sumProjection = Projection(Statistic("sum"), Some("ec2"), "time")
+        val avgProjection = Projection(Statistic("avg"), Some("ec2"), None, "time")
+        val sumProjection = Projection(Statistic("sum"), Some("ec2"), None, "time")
         val namespace = Namespace("AWS/EC2", Some("ec2"))
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
@@ -121,8 +121,8 @@ class PlannerTest extends WordSpec with Matchers {
       }
 
       "fail when namespace alias isn't provided but it's used on projections" in {
-        val avgProjection = Projection(Statistic("avg"), Some("ec2"), "time")
-        val sumProjection = Projection(Statistic("sum"), Some("ec2"), "time")
+        val avgProjection = Projection(Statistic("avg"), Some("ec2"), None, "time")
+        val sumProjection = Projection(Statistic("sum"), Some("ec2"), None, "time")
         val namespace = Namespace("AWS/EC2", None)
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
@@ -132,8 +132,8 @@ class PlannerTest extends WordSpec with Matchers {
       }
 
       "plan a request with namespace aliases" in {
-        val avgProjection = Projection(Statistic("avg"), Some("ec2"), "time")
-        val sumProjection = Projection(Statistic("sum"), Some("ec2"), "time")
+        val avgProjection = Projection(Statistic("avg"), Some("ec2"), None, "time")
+        val sumProjection = Projection(Statistic("sum"), Some("ec2"), None, "time")
         val namespace = Namespace("AWS/EC2", Some("ec2"))
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
@@ -160,9 +160,9 @@ class PlannerTest extends WordSpec with Matchers {
 
     "when given multiple namespaces" should {
       "plan multiple requests for single metric per namespace" in {
-        val ec2AvgProjection = Projection(Statistic("avg"), Some("ec2"), "time")
+        val ec2AvgProjection = Projection(Statistic("avg"), Some("ec2"), None, "time")
         val ec2Namespace = Namespace("AWS/EC2", Some("ec2"))
-        val elbAvgProjection = Projection(Statistic("avg"), Some("elb"), "latency")
+        val elbAvgProjection = Projection(Statistic("avg"), Some("elb"), None, "latency")
         val elbNamespace = Namespace("AWS/ELB", Some("elb"))
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
@@ -213,9 +213,9 @@ class PlannerTest extends WordSpec with Matchers {
       }
 
       "fail for multiple namespaces without aliases" in {
-        val ec2AvgProjection = Projection(Statistic("avg"), None, "time")
+        val ec2AvgProjection = Projection(Statistic("avg"), None, None, "time")
         val ec2Namespace = Namespace("AWS/EC2", None)
-        val elbAvgProjection = Projection(Statistic("avg"), None, "latency")
+        val elbAvgProjection = Projection(Statistic("avg"), None, None, "latency")
         val elbNamespace = Namespace("AWS/ELB", None)
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
@@ -226,8 +226,8 @@ class PlannerTest extends WordSpec with Matchers {
     }
 
     "fail when start time is after end time" in {
-      val avgProjection = Projection(Statistic("avg"), None, "time")
-      val sumProjection = Projection(Statistic("sum"), None, "request_size")
+      val avgProjection = Projection(Statistic("avg"), None, None, "time")
+      val sumProjection = Projection(Statistic("sum"), None, None, "request_size")
       val namespace = Namespace("AWS/EC2", None)
       val between = Between("2018-01-01T10:00:00Z", "2018-01-01T00:00:00Z")
       val period = Period(60)

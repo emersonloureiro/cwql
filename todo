@@ -1,3 +1,2 @@
 
-. carry over aliases to cw request for the record columns
 . handle different namespaces with the same alias
