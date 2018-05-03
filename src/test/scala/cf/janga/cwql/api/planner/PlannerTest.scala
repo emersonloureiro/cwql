@@ -156,6 +156,17 @@ class PlannerTest extends WordSpec with Matchers {
 
         val OrderByStep(None) = cwQueryPlan.steps(1)
       }
+
+      "fail when the same alias is used in different projections" in {
+        val ec2AvgTimeProjection = Projection(Statistic("avg"), None, Some("avg_time"), "time")
+        val ec2AvgLatencyProjection = Projection(Statistic("avg"), None, Some("avg_time"), "latency")
+        val ec2Namespace = Namespace("AWS/EC2", None)
+        val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
+        val period = Period(60)
+        val cwQuery = Query(List(ec2AvgTimeProjection, ec2AvgLatencyProjection), List(ec2Namespace), None, between, period)
+        val Left(planningError) = new Planner().plan(cwQuery)
+        planningError should be(ProjectionAliasAlreadyInUse(ec2AvgLatencyProjection))
+      }
     }
 
     "when given multiple namespaces" should {
@@ -222,6 +233,18 @@ class PlannerTest extends WordSpec with Matchers {
         val cwQuery = Query(List(ec2AvgProjection, elbAvgProjection), List(ec2Namespace, elbNamespace), None, between, period)
         val Left(planningError) = new Planner().plan(cwQuery)
         planningError should be(UnmatchedProjection(ec2AvgProjection))
+      }
+
+      "fail when the same alias is used in different projections" in {
+        val ec2AvgProjection = Projection(Statistic("avg"), Some("ec2"), Some("avg_time"), "time")
+        val ec2Namespace = Namespace("AWS/EC2", Some("ec2"))
+        val elbAvgProjection = Projection(Statistic("avg"), Some("elb"), Some("avg_time"), "latency")
+        val elbNamespace = Namespace("AWS/ELB", Some("elb"))
+        val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
+        val period = Period(60)
+        val cwQuery = Query(List(ec2AvgProjection, elbAvgProjection), List(ec2Namespace, elbNamespace), None, between, period)
+        val Left(planningError) = new Planner().plan(cwQuery)
+        planningError should be(ProjectionAliasAlreadyInUse(elbAvgProjection))
       }
     }
 

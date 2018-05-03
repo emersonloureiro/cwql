@@ -6,6 +6,7 @@ import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProvider
 import com.amazonaws.services.cloudwatch.model.{Dimension, GetMetricStatisticsRequest}
 import org.joda.time.format.ISODateTimeFormat
 
+import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 
 case class QueryPlan(steps: Seq[Step])
@@ -17,16 +18,36 @@ sealed trait PlannerError
 case object StartTimeAfterEndTime extends PlannerError
 case class UnmatchedProjection(projection: Projection) extends PlannerError
 case class UnmatchedFilter(booleanExpression: SimpleBooleanExpression) extends PlannerError
+case class ProjectionAliasAlreadyInUse(projection: Projection) extends PlannerError
 
 class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCredentialsProviderChain()) {
 
   def plan(query: Query): Either[PlannerError, QueryPlan] = {
     for {
+      _ <- preCheck(query)
       projectionsPerMetric <- groupProjectionsPerMetric(query.projections, query.namespaces, Map.empty, 0)
       cwRequestStep <- planCwRequestStep(projectionsPerMetric, query.selectionOption, query.between, query.period, Seq.empty)
     } yield {
       QueryPlan(Seq(cwRequestStep, OrderByStep(None)))
     }
+  }
+
+  private def preCheck(query: Query): Either[PlannerError, Unit] = {
+    for {
+      _ <- checkForDuplicateProjectionAliases(query.projections, Set.empty)
+    } yield ()
+  }
+
+  @tailrec
+  private def checkForDuplicateProjectionAliases(projections: Seq[Projection], aliasSet: Set[String]): Either[PlannerError, Unit] = projections.headOption match {
+    case Some(projection) => {
+      projection.alias match {
+        case Some(alias) if aliasSet.contains(alias) => Left(ProjectionAliasAlreadyInUse(projection))
+        case Some(alias) => checkForDuplicateProjectionAliases(projections.tail, aliasSet ++ Set(alias))
+        case None => checkForDuplicateProjectionAliases(projections.tail, aliasSet)
+      }
+    }
+    case None => Right(())
   }
 
   private def planCwRequestStep(groupedProjections: Seq[GroupedProjections], selectionOption: Option[Selection],
@@ -107,6 +128,7 @@ class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCre
     getDimensionsFromSelectionRec(namespace, projection, Seq((And, selection.booleanExpression.simpleBooleanExpression)) ++ selection.booleanExpression.nested, Seq.empty, Seq.empty)
   }
 
+  @tailrec
   private def groupProjectionsPerMetric(projections: Seq[Projection],
                                         namespaces: Seq[Namespace],
                                         groupedProjectionsMap: Map[String, GroupedProjections],

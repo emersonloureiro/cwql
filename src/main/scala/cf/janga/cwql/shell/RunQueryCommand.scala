@@ -33,7 +33,12 @@ case class RunQuery(parser: Parser, planner: Planner, executor: Executor, query:
           }
           case UnmatchedFilter(booleanExpression) => {
             val expressionName = booleanExpression.alias.fold(booleanExpression.left)(alias => s"$alias.${booleanExpression.left}")
-            console.writeln(s"""Invalid condition at "$expressionName"""")
+            console.writeln(s"""Invalid condition at "$expressionName". Are you missing a namespace alias?""")
+          }
+          case ProjectionAliasAlreadyInUse(projection) => {
+            val Some(projectionAlias) = projection.alias
+            val metric = projection.namespaceAlias.fold(projection.metric)(namespaceAlias => s"$namespaceAlias.${projection.metric}")
+            console.writeln(s"Alias $projectionAlias on metric $metric is already in use")
           }
         }
       }
