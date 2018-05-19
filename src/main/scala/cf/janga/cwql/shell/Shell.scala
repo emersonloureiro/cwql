@@ -9,6 +9,10 @@ object StdoutConsole extends Console {
   override def writeln(string: String): Unit = {
     println(string)
   }
+
+  override def write(string: String): Unit = {
+    print(string)
+  }
 }
 
 object Shell extends App {
@@ -33,7 +37,7 @@ object Shell extends App {
 
   @tailrec
   private def readInput(reader: InputReader, commandInterpreter: CommandInterpreter): Unit = {
-    print("> ")
+    commandInterpreter.beforeInput()
     val input = reader.readInput()
     commandInterpreter.handle(input)
     readInput(reader, commandInterpreter)

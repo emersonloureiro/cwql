@@ -6,14 +6,6 @@ import cf.janga.cwql.api.planner.{Planner, ResultSet}
 
 import scala.util.{Failure, Success, Try}
 
-sealed trait Signal
-
-case class QueryResult(resultSet: Option[ResultSet], error: Option[String]) extends Signal
-
-case class InvalidInput(details: Option[String]) extends Signal
-
-case object EmptyInput extends Signal
-
 trait Command {
   def run(): Unit
 
@@ -22,6 +14,8 @@ trait Command {
 
 trait Console {
   def writeln(string: String): Unit
+
+  def write(string: String): Unit
 }
 
 class CommandInterpreter(console: Console) {
@@ -32,30 +26,44 @@ class CommandInterpreter(console: Console) {
 
   private val executor = new Executor()
 
-  def handle(input: String): Unit = Option(input) match {
-    case None => // no-op
-    case Some(nonNullInput) if nonNullInput.trim().isEmpty => // no-op
-    case Some(_) => {
-      for {
-        command <- parseInput(input)
-      } {
-        command.run()
-      }
+  private var multilineMode = false
+
+  private var multilineQuery = ""
+
+  def beforeInput(): Unit = {
+    if (!multilineMode) {
+      console.write("> ")
     }
   }
 
-  private def parseInput(input: String): Option[Command] = {
+  def handle(input: String): Unit = Option(input) match {
+    case None => // no-op
+    case Some(nonNullInput) if nonNullInput.trim().isEmpty => // no-op
+    case Some(_) => parseInput(input).run()
+  }
+
+  private def parseInput(input: String): Command = {
     if (input.startsWith("\\")) {
       input match {
-        case "\\q" => Some(Exit(console))
-        case _ => {
-          console.writeln("Invalid command")
-          None
+        case "\\q" => Exit(console)
+        case "\\m" => {
+          multilineMode = true
+          MultilineCommand(console)
         }
+        case "\\e" if multilineMode => {
+          multilineMode = false
+          RunQuery(parser, planner, executor, multilineQuery, console)
+        }
+        case _ => InvalidCommand(console)
       }
     } else {
-      // Assuming it's a query
-      Some(RunQuery(parser, planner, executor, input, console))
+      if (multilineMode) {
+        multilineQuery += input
+        EmptyCommand(console)
+      } else {
+        // Assuming it's a query
+        RunQuery(parser, planner, executor, input, console)
+      }
     }
   }
 }
