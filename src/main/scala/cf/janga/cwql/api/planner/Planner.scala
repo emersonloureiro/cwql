@@ -9,7 +9,7 @@ import org.joda.time.format.ISODateTimeFormat
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 
-case class QueryPlan(steps: Seq[Step])
+case class CwqlPlan(steps: Seq[Step])
 
 case class UnorderedProjection(originalProjection: Projection, order: Int)
 private case class GroupedProjections(namespace: Namespace, metric: String, projections: Seq[UnorderedProjection])
@@ -22,13 +22,17 @@ case class ProjectionAliasAlreadyInUse(projection: Projection) extends PlannerEr
 
 class Planner(awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCredentialsProviderChain()) {
 
-  def plan(query: Query): Either[PlannerError, QueryPlan] = {
+  def plan(cwqlStatement: CwqlStatement): Either[PlannerError, CwqlPlan] = cwqlStatement match {
+    case query: Query => planQuery(query)
+  }
+
+  private def planQuery(query: Query) = {
     for {
       _ <- preCheck(query)
       projectionsPerMetric <- groupProjectionsPerMetric(query.projections, query.namespaces, Map.empty, 0)
       cwRequestStep <- planCwRequestStep(projectionsPerMetric, query.selectionOption, query.between, query.period, Seq.empty)
     } yield {
-      QueryPlan(Seq(cwRequestStep, OrderByStep(None)))
+      CwqlPlan(Seq(cwRequestStep, OrderByStep(None)))
     }
   }
 

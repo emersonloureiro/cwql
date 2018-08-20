@@ -1,7 +1,5 @@
 package cf.janga.cwql.api.parser
 
-case class Query(projections: Seq[Projection], namespaces: Seq[Namespace], selectionOption: Option[Selection], between: Between, period: Period)
-
 case class Projection(statistic: Statistic, namespaceAlias: Option[String], alias: Option[String], metric: String)
 
 case class Namespace(value: String, aliasOption: Option[String])

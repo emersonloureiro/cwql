@@ -17,9 +17,9 @@ class PlannerTest extends WordSpec with Matchers {
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
         val cwQuery = Query(List(projection), List(namespace), None, between, period)
-        val Right(cwQueryPlan) = new Planner().plan(cwQuery)
-        cwQueryPlan.steps.size should be(2)
-        val CwRequestStep(_, cwRequests) = cwQueryPlan.steps.head
+        val Right(cwqlPlan) = new Planner().plan(cwQuery)
+        cwqlPlan.steps.size should be(2)
+        val CwRequestStep(_, cwRequests) = cwqlPlan.steps.head
         cwRequests.size should be(1)
         val cwRequest = cwRequests.head.cloudWatchRequest
         cwRequest.getNamespace should be(namespace.value)
@@ -32,7 +32,7 @@ class PlannerTest extends WordSpec with Matchers {
         val endDateTime = formatter.parseDateTime(cwQuery.between.endTime)
         new DateTime(cwRequest.getEndTime) should be(endDateTime)
 
-        val OrderByStep(None) = cwQueryPlan.steps(1)
+        val OrderByStep(None) = cwqlPlan.steps(1)
       }
 
       "plan a single request for multiple statistics of a single metric" in {
@@ -42,9 +42,9 @@ class PlannerTest extends WordSpec with Matchers {
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
         val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), None, between, period)
-        val Right(cwQueryPlan) = new Planner().plan(cwQuery)
-        cwQueryPlan.steps.size should be(2)
-        val CwRequestStep(_, cwRequests) = cwQueryPlan.steps.head
+        val Right(cwqlPlan) = new Planner().plan(cwQuery)
+        cwqlPlan.steps.size should be(2)
+        val CwRequestStep(_, cwRequests) = cwqlPlan.steps.head
         cwRequests.size should be(1)
         val cwRequest = cwRequests.head.cloudWatchRequest
         cwRequest.getNamespace should be(namespace.value)
@@ -58,7 +58,7 @@ class PlannerTest extends WordSpec with Matchers {
         val endDateTime = formatter.parseDateTime(cwQuery.between.endTime)
         new DateTime(cwRequest.getEndTime) should be(endDateTime)
 
-        val OrderByStep(None) = cwQueryPlan.steps(1)
+        val OrderByStep(None) = cwqlPlan.steps(1)
       }
 
       "plan multiple requests for multiple metrics" in {
@@ -68,9 +68,9 @@ class PlannerTest extends WordSpec with Matchers {
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
         val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), None, between, period)
-        val Right(cwQueryPlan) = new Planner().plan(cwQuery)
-        cwQueryPlan.steps.size should be(2)
-        val CwRequestStep(_, cwRequests) = cwQueryPlan.steps.head
+        val Right(cwqlPlan) = new Planner().plan(cwQuery)
+        cwqlPlan.steps.size should be(2)
+        val CwRequestStep(_, cwRequests) = cwqlPlan.steps.head
         cwRequests.size should be(2)
         val avgCwRequest = cwRequests.head.cloudWatchRequest
         avgCwRequest.getNamespace should be(namespace.value)
@@ -93,7 +93,7 @@ class PlannerTest extends WordSpec with Matchers {
         val sumRequestEndDateTime = formatter.parseDateTime(cwQuery.between.endTime)
         new DateTime(sumCwRequest.getEndTime) should be(sumRequestEndDateTime)
 
-        val OrderByStep(None) = cwQueryPlan.steps(1)
+        val OrderByStep(None) = cwqlPlan.steps(1)
       }
 
       "fail when namespace alias isn't used on projections" in {
@@ -138,9 +138,9 @@ class PlannerTest extends WordSpec with Matchers {
         val between = Between("2018-01-01T00:00:00Z", "2018-01-31T23:59:59Z")
         val period = Period(60)
         val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), None, between, period)
-        val Right(cwQueryPlan) = new Planner().plan(cwQuery)
-        cwQueryPlan.steps.size should be(2)
-        val CwRequestStep(_, cwRequests) = cwQueryPlan.steps.head
+        val Right(cwqlPlan) = new Planner().plan(cwQuery)
+        cwqlPlan.steps.size should be(2)
+        val CwRequestStep(_, cwRequests) = cwqlPlan.steps.head
         cwRequests.size should be(1)
         val cwRequest = cwRequests.head.cloudWatchRequest
         cwRequest.getNamespace should be(namespace.value)
@@ -154,7 +154,7 @@ class PlannerTest extends WordSpec with Matchers {
         val endDateTime = formatter.parseDateTime(cwQuery.between.endTime)
         new DateTime(cwRequest.getEndTime) should be(endDateTime)
 
-        val OrderByStep(None) = cwQueryPlan.steps(1)
+        val OrderByStep(None) = cwqlPlan.steps(1)
       }
 
       "fail when the same alias is used in different projections" in {
@@ -184,9 +184,9 @@ class PlannerTest extends WordSpec with Matchers {
           List(ec2AvgProjection, elbAvgProjection), List(ec2Namespace, elbNamespace),
           Some(selection),
           between, period)
-        val Right(cwQueryPlan) = new Planner().plan(cwQuery)
-        cwQueryPlan.steps.size should be(2)
-        val CwRequestStep(_, cwRequests) = cwQueryPlan.steps.head
+        val Right(cwqlPlan) = new Planner().plan(cwQuery)
+        cwqlPlan.steps.size should be(2)
+        val CwRequestStep(_, cwRequests) = cwqlPlan.steps.head
         cwRequests.size should be(2)
 
         // avg ec2 metric
@@ -220,7 +220,7 @@ class PlannerTest extends WordSpec with Matchers {
         val elbAvgRequestEndDateTime = formatter.parseDateTime(cwQuery.between.endTime)
         new DateTime(elbAvgCwRequest.getEndTime) should be(elbAvgRequestEndDateTime)
 
-        val OrderByStep(None) = cwQueryPlan.steps(1)
+        val OrderByStep(None) = cwqlPlan.steps(1)
       }
 
       "fail for multiple namespaces without aliases" in {

@@ -1,15 +1,14 @@
 package cf.janga.cwql.api.parser
 
-import org.parboiled2.{Parser => ParboiledParser}
-import org.parboiled2._
+import org.parboiled2.{Parser => ParboiledParser, _}
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 case class ParserError(line: Int, column: Int) extends RuntimeException
 
 class Parser {
 
-  def parse(query: String): Either[ParserError, Query] = {
+  def parse(query: String): Either[ParserError, CwqlStatement] = {
     new InnerParser(query.stripMargin).Sql.run() match {
       case Success(parsedQuery) => Right(parsedQuery)
       case Failure(ParseError(position, principalPosition, traces)) => {

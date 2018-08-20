@@ -10,8 +10,8 @@ case class RunQuery(parser: Parser, planner: Planner, executor: Executor, query:
     val planning =
       for {
         parsedQuery <- parser.parse(query)
-        queryPlan <- planner.plan(parsedQuery)
-        resultSet <- executor.execute(queryPlan.steps)
+        plan <- planner.plan(parsedQuery)
+        resultSet <- executor.execute(plan.steps)
       } yield resultSet
 
     planning match {
