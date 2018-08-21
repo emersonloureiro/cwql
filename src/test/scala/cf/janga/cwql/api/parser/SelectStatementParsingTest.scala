@@ -4,10 +4,10 @@ import org.scalatest.{Matchers, WordSpec}
 
 import scala.util.Success
 
-class QueryParsingTest extends WordSpec with Matchers {
+class SelectStatementParsingTest extends WordSpec with Matchers {
 
   "cwql parser" when {
-    "given a basic query" should {
+    "given a select statement" should {
       "parse a single projection" in {
         val queryString = "select avg(time) from requests between 2018-01-01T00:00:00Z and 2018-01-31T:23:59:59Z period 10"
         val Right(query: Query) = new Parser().parse(queryString)
