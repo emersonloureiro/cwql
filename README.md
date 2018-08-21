@@ -16,7 +16,7 @@ SELECT
   stat1,
   stat2,
   ...
-FROM name
+FROM namespace
 WHERE
   dimension1=value1,
   dimension2=value2
