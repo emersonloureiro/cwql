@@ -22,6 +22,26 @@ class Parser {
 private class InnerParser(val input: ParserInput) extends ParboiledParser {
 
   def Sql = rule {
+    SelectStatement | InsertStatement
+  }
+
+  // Insert statement
+
+  def InsertStatement = rule {
+    NonRequiredSpaceRule ~ ignoreCase("insert") ~ RequiredSpaceRule ~ ignoreCase("into") ~ RequiredSpaceRule ~ NamespaceRule ~ RequiredSpaceRule ~ ignoreCase("values") ~ RequiredSpaceRule ~ oneOrMore(ValuesRule).separatedBy(ch(',') ~ NonRequiredSpaceRule) ~ RequiredSpaceRule ~ ignoreCase("with") ~ RequiredSpaceRule ~ zeroOrMore(DimensionRule).separatedBy(',' ~ NonRequiredSpaceRule) ~> ((namespace, values, dimensions) => Insert(Namespace(namespace, None), values, dimensions.asInstanceOf[Seq[MetricDimension]]))
+  }
+
+  def DimensionRule = rule {
+    IdentifierRule ~ NonRequiredSpaceRule ~ ch('=') ~ NonRequiredSpaceRule ~ DimensionValueRule ~> MetricDimension
+  }
+
+  def ValuesRule = rule {
+    ch('(') ~ NonRequiredSpaceRule ~ IdentifierRule ~ NonRequiredSpaceRule ~ ch(',') ~ NonRequiredSpaceRule ~ IdentifierRule ~ NonRequiredSpaceRule ~ ch(',') ~ NonRequiredSpaceRule ~ IdentifierRule ~ NonRequiredSpaceRule ~ ch(')') ~> MetricData
+  }
+
+  // Select statement
+
+  def SelectStatement = rule {
     NonRequiredSpaceRule ~ SelectRule ~ RequiredSpaceRule ~ FromRule ~ RequiredSpaceRule ~ optional(WhereRule ~ RequiredSpaceRule) ~ BetweenRule ~ RequiredSpaceRule ~ PeriodRule ~ NonRequiredSpaceRule ~ EOI ~> {
       (select, namespaces, where, between, period) => {
         Query(select, namespaces, where.asInstanceOf[Option[Selection]], between, period)
@@ -61,6 +81,10 @@ private class InnerParser(val input: ParserInput) extends ParboiledParser {
     oneOrMore(capture(oneOrMore(anyOf("AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwYyXxZz0123456789_/")))
       ~ optional(RequiredSpaceRule ~ ignoreCase("as") ~ RequiredSpaceRule ~ IdentifierRule) ~> ((namespace, alias) => (namespace, alias))).separatedBy(NonRequiredSpaceRule ~ str(",") ~ NonRequiredSpaceRule) ~>
       (namespaces => namespaces.map(namespace => Namespace(namespace._1, namespace._2.asInstanceOf[Option[String]])))
+  }
+
+  def NamespaceRule = rule {
+    capture(oneOrMore(anyOf("AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwYyXxZz0123456789_/")))
   }
 
   def FromRule = rule {
@@ -105,6 +129,10 @@ private class InnerParser(val input: ParserInput) extends ParboiledParser {
 
   def StringRule = rule {
     ('\'' ~ NonRequiredSpaceRule ~ capture(zeroOrMore(!'\'' ~ ANY)) ~ NonRequiredSpaceRule ~ '\'') ~> (a => StringValue(a))
+  }
+
+  def DimensionValueRule = rule {
+    NonRequiredSpaceRule ~ capture(zeroOrMore(!'\'' ~ !',' ~ ANY)) ~ NonRequiredSpaceRule
   }
 
   def RequiredSpaceRule = rule {
