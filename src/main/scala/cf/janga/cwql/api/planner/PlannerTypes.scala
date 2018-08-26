@@ -1,6 +1,8 @@
 package cf.janga.cwql.api.planner
 
-case class ResultSet(records: Seq[Record])
+sealed trait Result
+case class ResultSet(records: Seq[Record]) extends Result
+case class InsertResult(success: Boolean) extends Result
 
 case class Record(timestamp: String, data: Map[String, (String, Int)] = Map.empty[String, (String, Int)]) {
 
@@ -11,7 +13,9 @@ case class Record(timestamp: String, data: Map[String, (String, Int)] = Map.empt
 
 sealed trait ExecutionError
 case class CloudWatchClientError(message: String) extends ExecutionError
+case object ClientError extends ExecutionError
+case object UnknownCwError extends ExecutionError
 
 trait Step {
-  def execute(inputOption: Option[ResultSet]): Either[ExecutionError, ResultSet]
+  def execute(inputOption: Option[Result]): Either[ExecutionError, Result]
 }

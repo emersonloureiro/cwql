@@ -22,7 +22,7 @@ class Parser {
 private class InnerParser(val input: ParserInput) extends ParboiledParser {
 
   def Sql = rule {
-    SelectStatement | InsertStatement
+    (SelectStatement | InsertStatement) ~ EOI
   }
 
   // Insert statement
@@ -36,13 +36,16 @@ private class InnerParser(val input: ParserInput) extends ParboiledParser {
   }
 
   def ValuesRule = rule {
-    ch('(') ~ NonRequiredSpaceRule ~ IdentifierRule ~ NonRequiredSpaceRule ~ ch(',') ~ NonRequiredSpaceRule ~ IdentifierRule ~ NonRequiredSpaceRule ~ ch(',') ~ NonRequiredSpaceRule ~ IdentifierRule ~ NonRequiredSpaceRule ~ ch(')') ~> MetricData
+    ch('(') ~ NonRequiredSpaceRule ~ IdentifierRule ~ NonRequiredSpaceRule ~ ch(',') ~ NonRequiredSpaceRule ~ UnitRule ~ NonRequiredSpaceRule ~ ch(',') ~ NonRequiredSpaceRule ~ IdentifierRule ~ NonRequiredSpaceRule ~ ch(')') ~> MetricData
   }
+
+  def UnitRule = rule {
+    capture(str("Bytes/Second")) | capture(str("Kilobytes/Second")) | capture(str("Megabytes/Second")) | capture(str("Gigabytes/Second")) | capture(str("Terabytes/Second")) | capture(str("Bits/Second")) | capture(str("Kilobits/Second")) | capture(str("Megabits/Second")) | capture(str("Gigabits/Second")) | capture(str("Terabits/Second")) | capture(str("Count/Second")) | capture(str("Seconds")) | capture(str("Microseconds")) | capture(str("Milliseconds")) | capture(str("Bytes")) | capture(str("Kilobytes")) | capture(str("Megabytes")) | capture(str("Gigabytes")) | capture(str("Terabytes")) | capture(str("Bits")) | capture(str("Kilobits")) | capture(str("Megabits")) | capture(str("Gigabits")) | capture(str("Terabits")) | capture(str("Percent")) | capture(str("Count")) | capture(str("None"))  }
 
   // Select statement
 
   def SelectStatement = rule {
-    NonRequiredSpaceRule ~ SelectRule ~ RequiredSpaceRule ~ FromRule ~ RequiredSpaceRule ~ optional(WhereRule ~ RequiredSpaceRule) ~ BetweenRule ~ RequiredSpaceRule ~ PeriodRule ~ NonRequiredSpaceRule ~ EOI ~> {
+    NonRequiredSpaceRule ~ SelectRule ~ RequiredSpaceRule ~ FromRule ~ RequiredSpaceRule ~ optional(WhereRule ~ RequiredSpaceRule) ~ BetweenRule ~ RequiredSpaceRule ~ PeriodRule ~ NonRequiredSpaceRule ~> {
       (select, namespaces, where, between, period) => {
         Query(select, namespaces, where.asInstanceOf[Option[Selection]], between, period)
       }

@@ -3,10 +3,9 @@ package cf.janga.cwql.integration
 import cf.janga.cwql.api.executor.Executor
 import cf.janga.cwql.api.parser._
 import cf.janga.cwql.api.planner.Planner
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.{Ignore, Matchers, WordSpec}
 
-import scala.util.Success
-
+@Ignore
 class IntegrationTest extends WordSpec with Matchers {
 
   private def testQuery(query: String) = {

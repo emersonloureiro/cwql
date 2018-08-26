@@ -7,7 +7,7 @@ import org.scalatest.{Matchers, WordSpec}
 
 import scala.collection.JavaConverters._
 
-class PlannerTest extends WordSpec with Matchers {
+class QueryPlanningTest extends WordSpec with Matchers {
 
   "cqwl planner" when {
     "given a single namespace" should {
@@ -19,7 +19,7 @@ class PlannerTest extends WordSpec with Matchers {
         val cwQuery = Query(List(projection), List(namespace), None, between, period)
         val Right(cwqlPlan) = new Planner().plan(cwQuery)
         cwqlPlan.steps.size should be(2)
-        val CwRequestStep(_, cwRequests) = cwqlPlan.steps.head
+        val GetMetricStatisticsStep(_, cwRequests) = cwqlPlan.steps.head
         cwRequests.size should be(1)
         val cwRequest = cwRequests.head.cloudWatchRequest
         cwRequest.getNamespace should be(namespace.value)
@@ -44,7 +44,7 @@ class PlannerTest extends WordSpec with Matchers {
         val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), None, between, period)
         val Right(cwqlPlan) = new Planner().plan(cwQuery)
         cwqlPlan.steps.size should be(2)
-        val CwRequestStep(_, cwRequests) = cwqlPlan.steps.head
+        val GetMetricStatisticsStep(_, cwRequests) = cwqlPlan.steps.head
         cwRequests.size should be(1)
         val cwRequest = cwRequests.head.cloudWatchRequest
         cwRequest.getNamespace should be(namespace.value)
@@ -70,7 +70,7 @@ class PlannerTest extends WordSpec with Matchers {
         val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), None, between, period)
         val Right(cwqlPlan) = new Planner().plan(cwQuery)
         cwqlPlan.steps.size should be(2)
-        val CwRequestStep(_, cwRequests) = cwqlPlan.steps.head
+        val GetMetricStatisticsStep(_, cwRequests) = cwqlPlan.steps.head
         cwRequests.size should be(2)
         val avgCwRequest = cwRequests.head.cloudWatchRequest
         avgCwRequest.getNamespace should be(namespace.value)
@@ -140,7 +140,7 @@ class PlannerTest extends WordSpec with Matchers {
         val cwQuery = Query(List(avgProjection, sumProjection), List(namespace), None, between, period)
         val Right(cwqlPlan) = new Planner().plan(cwQuery)
         cwqlPlan.steps.size should be(2)
-        val CwRequestStep(_, cwRequests) = cwqlPlan.steps.head
+        val GetMetricStatisticsStep(_, cwRequests) = cwqlPlan.steps.head
         cwRequests.size should be(1)
         val cwRequest = cwRequests.head.cloudWatchRequest
         cwRequest.getNamespace should be(namespace.value)
@@ -186,7 +186,7 @@ class PlannerTest extends WordSpec with Matchers {
           between, period)
         val Right(cwqlPlan) = new Planner().plan(cwQuery)
         cwqlPlan.steps.size should be(2)
-        val CwRequestStep(_, cwRequests) = cwqlPlan.steps.head
+        val GetMetricStatisticsStep(_, cwRequests) = cwqlPlan.steps.head
         cwRequests.size should be(2)
 
         // avg ec2 metric

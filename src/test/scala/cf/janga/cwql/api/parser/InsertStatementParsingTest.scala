@@ -49,7 +49,7 @@ class InsertStatementParsingTest extends WordSpec with Matchers {
       }
 
       "parse insertion of multiple dimensions" in {
-        val insertString = "insert into TestNamespace values (latency, Milliseconds, 1234), (buffer, Bytes, 98765) with InstanceID=123456, InstanceType=t2.micro"
+        val insertString = """insert into TestNamespace values (latency, Milliseconds, 1234), (buffer, Kilobytes/Second, 98765) with InstanceID=123456, InstanceType=t2.micro"""
         val Right(insert: Insert) = new Parser().parse(insertString)
 
         insert.namespace.value should be("TestNamespace")
@@ -62,7 +62,7 @@ class InsertStatementParsingTest extends WordSpec with Matchers {
         latencyMetricData.value should be("1234")
         val bufferMetricData = insert.metricData(1)
         bufferMetricData.metricName should be("buffer")
-        bufferMetricData.metricUnit should be("Bytes")
+        bufferMetricData.metricUnit should be("Kilobytes/Second")
         bufferMetricData.value should be("98765")
 
         insert.dimensions.size should be(2)
@@ -72,6 +72,11 @@ class InsertStatementParsingTest extends WordSpec with Matchers {
         val instanceTypeDimension = insert.dimensions(1)
         instanceTypeDimension.name should be("InstanceType")
         instanceTypeDimension.value should be("t2.micro")
+      }
+
+      "fail parsing for invalid unit" in {
+        val insertString = "insert into TestNamespace values (latency, WrongUnig, 1234) with InstanceID=123456, InstanceType=t2.micro"
+        val Left(_) = new Parser().parse(insertString)
       }
     }
   }

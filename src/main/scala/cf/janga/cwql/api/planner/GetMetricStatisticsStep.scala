@@ -1,32 +1,29 @@
 package cf.janga.cwql.api.planner
 
+import cf.janga.cwql.api.planner.CwQueryConversions._
 import com.amazonaws.auth.AWSCredentialsProvider
-import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder
-import com.amazonaws.services.cloudwatch.model.{Datapoint, GetMetricStatisticsRequest, GetMetricStatisticsResult}
+import com.amazonaws.services.cloudwatch.model.{Datapoint, GetMetricStatisticsRequest}
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
-import cf.janga.cwql.api.planner.CwQueryConversions._
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
-import scala.util.{Failure, Success, Try}
 
 private case class StatisticDatapoint(cloudWatchStatistic: String, value: Double, unorderedProjection: UnorderedProjection)
 case class GetMetricStatisticsRequestForProjections(cloudWatchRequest: GetMetricStatisticsRequest, projections: Seq[UnorderedProjection])
 
-case class CwRequestStep(awsCredentialsProvider: AWSCredentialsProvider, requests: Seq[GetMetricStatisticsRequestForProjections]) extends Step {
+case class GetMetricStatisticsStep(awsCredentialsProvider: AWSCredentialsProvider, requests: Seq[GetMetricStatisticsRequestForProjections])
+  extends Step with CwStep {
 
-  private val cwClient = AmazonCloudWatchClientBuilder.standard().withCredentials(awsCredentialsProvider).build()
-
-  override def execute(inputOption: Option[ResultSet]): Either[ExecutionError, ResultSet] = {
+  override def execute(inputOption: Option[Result]): Either[ExecutionError, Result] = {
     doExecute(requests, new HashJoin())
   }
 
   @tailrec
-  private def doExecute(requests: Seq[GetMetricStatisticsRequestForProjections], hashJoin: HashJoin): Either[ExecutionError, ResultSet] = requests match {
+  private def doExecute(requests: Seq[GetMetricStatisticsRequestForProjections], hashJoin: HashJoin): Either[ExecutionError, Result] = requests match {
     case request :: remaining => {
       val cloudWatchRequest = request.cloudWatchRequest
-      callCloudWatch(cloudWatchRequest) match {
+      callCloudWatch(cwClient => cwClient.getMetricStatistics(cloudWatchRequest)) match {
         case Right(result) => {
           val datapoints = result.getDatapoints
           datapoints.asScala.foreach {
@@ -48,13 +45,6 @@ case class CwRequestStep(awsCredentialsProvider: AWSCredentialsProvider, request
       }
     }
     case Nil => Right(ResultSet(hashJoin.result()))
-  }
-
-  private def callCloudWatch(request: GetMetricStatisticsRequest): Either[ExecutionError, GetMetricStatisticsResult] = {
-    Try(cwClient.getMetricStatistics(request)) match {
-      case Success(result) => Right(result)
-      case Failure(exception) => Left(CloudWatchClientError(exception.getMessage))
-    }
   }
 
   private def getStatisticDatapoints(datapoint: Datapoint, unorderedProjections: Seq[UnorderedProjection]): (Seq[StatisticDatapoint]) = {
