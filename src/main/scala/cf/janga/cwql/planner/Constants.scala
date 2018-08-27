@@ -1,4 +1,4 @@
-package cf.janga.cwql.api.planner
+package cf.janga.cwql.planner
 
 object Constants {
   val Average = "Average"

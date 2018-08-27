@@ -1,4 +1,4 @@
-package cf.janga.cwql.api.planner
+package cf.janga.cwql.planner
 
 case class OrderByStep(leadingKeyOption: Option[String]) extends Step {
 

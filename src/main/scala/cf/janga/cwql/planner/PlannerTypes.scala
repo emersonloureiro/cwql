@@ -1,4 +1,4 @@
-package cf.janga.cwql.api.planner
+package cf.janga.cwql.planner
 
 sealed trait Result
 case class ResultSet(records: Seq[Record]) extends Result

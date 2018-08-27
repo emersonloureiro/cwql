@@ -1,6 +1,6 @@
-package cf.janga.cwql.api.executor
+package cf.janga.cwql.executor
 
-import cf.janga.cwql.api.planner.{ExecutionError, Result, ResultSet, Step}
+import cf.janga.cwql.planner.{ExecutionError, Result, ResultSet, Step}
 
 class Executor {
 

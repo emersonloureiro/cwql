@@ -1,6 +1,6 @@
-package cf.janga.cwql.api.planner
+package cf.janga.cwql.planner
 
-import cf.janga.cwql.api.parser.Insert
+import cf.janga.cwql.parser.Insert
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.services.cloudwatch.model.{Dimension, MetricDatum, PutMetricDataRequest}
 

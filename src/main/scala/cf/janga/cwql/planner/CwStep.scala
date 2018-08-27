@@ -1,4 +1,4 @@
-package cf.janga.cwql.api.planner
+package cf.janga.cwql.planner
 
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.services.cloudwatch.{AmazonCloudWatch, AmazonCloudWatchClientBuilder}

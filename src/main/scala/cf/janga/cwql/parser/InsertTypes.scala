@@ -1,4 +1,4 @@
-package cf.janga.cwql.api.parser
+package cf.janga.cwql.parser
 
 case class MetricData(metricName: String, metricUnit: String, value: String)
 

@@ -1,8 +1,8 @@
 package cf.janga.cwql.integration
 
-import cf.janga.cwql.api.executor.Executor
-import cf.janga.cwql.api.parser._
-import cf.janga.cwql.api.planner.Planner
+import cf.janga.cwql.executor.Executor
+import cf.janga.cwql.parser._
+import cf.janga.cwql.planner.Planner
 import org.scalatest.{Ignore, Matchers, WordSpec}
 
 @Ignore

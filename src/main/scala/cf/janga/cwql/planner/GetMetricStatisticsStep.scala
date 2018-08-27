@@ -1,6 +1,6 @@
-package cf.janga.cwql.api.planner
+package cf.janga.cwql.planner
 
-import cf.janga.cwql.api.planner.CwQueryConversions._
+import cf.janga.cwql.planner.CwQueryConversions._
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.services.cloudwatch.model.{Datapoint, GetMetricStatisticsRequest}
 import org.joda.time.DateTime

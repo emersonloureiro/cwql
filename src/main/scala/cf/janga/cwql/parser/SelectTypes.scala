@@ -1,4 +1,4 @@
-package cf.janga.cwql.api.parser
+package cf.janga.cwql.parser
 
 case class Projection(statistic: Statistic, namespaceAlias: Option[String], alias: Option[String], metric: String)
 

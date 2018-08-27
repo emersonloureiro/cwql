@@ -1,6 +1,6 @@
-package cf.janga.cwql.api.planner
+package cf.janga.cwql.planner
 
-import cf.janga.cwql.api.parser.{Insert, MetricData, MetricDimension, Namespace}
+import cf.janga.cwql.parser.{Insert, MetricData, MetricDimension, Namespace}
 import org.scalatest.{Matchers, WordSpec}
 
 import scala.collection.JavaConverters._

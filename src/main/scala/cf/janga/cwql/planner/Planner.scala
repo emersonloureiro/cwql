@@ -1,8 +1,8 @@
-package cf.janga.cwql.api.planner
+package cf.janga.cwql.planner
 
-import cf.janga.cwql.api.parser._
-import cf.janga.cwql.api.planner.InsertPlanner._
-import cf.janga.cwql.api.planner.QueryPlanner._
+import cf.janga.cwql.parser._
+import cf.janga.cwql.planner.InsertPlanner._
+import cf.janga.cwql.planner.QueryPlanner._
 import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProviderChain}
 
 case class CwqlPlan(steps: Seq[Step])
