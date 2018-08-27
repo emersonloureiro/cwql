@@ -1,8 +1,6 @@
 # cwql
 
-SQL-like support on top of the CloudWatch SDK. This is pretty much a work in progress, so there's still limited support.
-
-## Why?
+SQL-like support on top of the CloudWatch SDK. Why that? Because...
 
 1. It's fun to write parsers and query processors
 2. Not a fan of the SDK for publishing and querying metrics
@@ -39,7 +37,7 @@ BETWEEN 2018-03-10T00:00:00Z
 PERIOD 3600
 ```
 
-A query like the above will return a result set with the `max` and `avg` joined by the timestamp, for example:
+Select statements will translate to `GetMetricStatistics` requests to CloudWatch. One request per *metric* will be sent. So in the example above, even though two statistics are being selected, they refer to the same metric, so we can send a single request. A query like the above will return a result set with the `max` and `avg` joined by the timestamp, for example:
 
 | Time | max_CPUUtilization   |      avg_CPUUtilization |
 |----------|:-------------:|----------|
@@ -71,4 +69,28 @@ would yield
 
 ## Publishing metrics
 
-*Work in progress*
+The general format for publishing metrics is:
+
+```
+INSERT INTO namespace VALUES
+  (metric_name_1, metric_unit_1, metric_value_1),
+  ...
+  (metric_name_n, metric_unit_n, metric_value_n),
+ WITH
+  dimension_name_1=dimension_value_1,
+  ...
+  dimension_name_n=dimension_value_n
+```
+
+For example, the statement below publishes 2 metrics (`latency` and `buffer`) tagged with 2 different dimensions each (`InstanceId` and `InstanceType`):
+
+```
+INSERT INTO Instances VALUES
+  (latency, Milliseconds, 1234),
+  (buffer, Kilobytes/Second, 98765)
+ WITH
+  InstanceID=123456,
+  InstanceType=t2.micro
+```
+
+A query like that will translate to a single `PutMetricData` call to CloudWatch. The units have to be one of the units that CloudWatch recognizes, and query will fail at parsing time if that's not the case.
